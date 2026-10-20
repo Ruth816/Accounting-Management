@@ -5,11 +5,13 @@ import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
+const WORKFLOW_ROLES = ['payment_requestor', 'payment_approver', 'fund_requestor', 'fund_approver'] as const
+
 export default async function Dashboard() {
   const { supabase, me, is } = await getMe()
   const { name } = await getDirectory()
 
-  const [mine, toApprove, toReceive, preparing, toFundApprove] = await Promise.all([
+  const [mine, toApprove, toReceive, preparing, toFundApprove, recent] = await Promise.all([
     is('payment_requestor')
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
@@ -24,6 +26,9 @@ export default async function Dashboard() {
       : null,
     is('fund_approver')
       ? supabase.from('fund_requests').select('*').eq('fund_approver_id', me.id).eq('status', 'pending_fund_approval').order('submitted_on')
+      : null,
+    is('admin')
+      ? supabase.from('payment_requests').select('*').not('status', 'in', '(draft,cancelled)').order('updated_at', { ascending: false }).limit(20)
       : null,
   ])
   const my = (mine?.data ?? []) as PaymentRequest[]
@@ -42,7 +47,32 @@ export default async function Dashboard() {
         </div>
       )}
 
-      {me.roles.length === 0 && <p className="msg">You have no roles yet. Ask an Admin to give you one.</p>}
+      {!WORKFLOW_ROLES.some(is) &&
+        (is('admin') ? (
+          <section className="card">
+            <h2>Get started</h2>
+            <p>
+              Your account is Admin only, so you have no request queues yet. Queues and the New payment request button appear
+              once a user has a workflow role.
+            </p>
+            <ol>
+              <li>
+                Open <Link href="/admin">Admin</Link> and add each person under <strong>Add a user</strong>.
+              </li>
+              <li>Tick their roles (Payment Requestor, Payment Approver, Fund Requestor, Fund Approver) and click Save.</li>
+              <li>Set each requestor&apos;s default payment approver and default fund approver.</li>
+            </ol>
+            <p className="small muted">
+              To try the flow yourself, tick Payment Requestor on your own user. Someone else must approve, so add at least one
+              other user as the approver.
+            </p>
+            <Link className="btn small" href="/admin">
+              Go to Admin
+            </Link>
+          </section>
+        ) : (
+          <p className="msg">You have no roles yet. Ask an Admin to give you one.</p>
+        ))}
 
       {is('payment_approver') && (
         <Queue title="Waiting for your approval" count={toApprove?.data?.length}>
@@ -73,6 +103,12 @@ export default async function Dashboard() {
             <FRTable rows={(preparing?.data ?? []) as FundRequest[]} empty="Nothing in preparation." />
           </Queue>
         </>
+      )}
+
+      {is('admin') && (
+        <Queue title="Latest requests across the company">
+          <PRTable rows={(recent?.data ?? []) as PaymentRequest[]} name={name} empty="No requests have been submitted yet." />
+        </Queue>
       )}
 
       {is('payment_requestor') && (
