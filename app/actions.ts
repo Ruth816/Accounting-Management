@@ -31,7 +31,14 @@ export async function signIn(_: ActionState, fd: FormData): Promise<ActionState>
     email: str(fd, 'email') ?? '',
     password: String(fd.get('password') ?? ''),
   })
-  if (error) return { error: 'Wrong email or password.' }
+  if (error) {
+    if (error.code === 'invalid_credentials') return { error: 'Wrong email or password.' }
+    if (error.code === 'email_not_confirmed') {
+      return { error: 'This account is not confirmed yet. Ask an Admin to confirm it in Supabase.' }
+    }
+    // Anything else is usually a setup problem (for example a wrong Supabase key), so show it.
+    return { error: `Could not sign in: ${error.message}` }
+  }
   redirect('/')
 }
 
