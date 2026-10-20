@@ -34,7 +34,7 @@ export default async function AdminPage() {
 
       <section className="card">
         <h2>Add a user</h2>
-        <ActionForm action={adminCreateUser} className="grid">
+        <ActionForm action={adminCreateUser} className="grid" resetOnSuccess>
           <label className="field">
             <span className="label">Full name</span>
             <input name="full_name" required />
@@ -134,7 +134,7 @@ export default async function AdminPage() {
                     </li>
                   ))}
               </ul>
-              <ActionForm action={adminLookup} hidden={{ op: 'add', list }} className="row">
+              <ActionForm action={adminLookup} hidden={{ op: 'add', list }} className="row" resetOnSuccess>
                 <input name="label" placeholder="New value" aria-label={`New ${title}`} required />
                 {list === 'tax_code' && <input name="rate" placeholder="Rate, e.g. 0.12" aria-label="Tax rate" required />}
                 <Submit className="btn secondary small">Add</Submit>

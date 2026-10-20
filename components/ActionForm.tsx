@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, startTransition, useActionState, useContext } from 'react'
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef } from 'react'
 import type { ActionState } from '@/lib/types'
 
 type Action = (state: ActionState, fd: FormData) => Promise<ActionState>
@@ -27,16 +27,22 @@ export function ActionForm({
   children,
   className,
   confirm,
+  resetOnSuccess,
 }: {
   action: Action
   hidden?: Record<string, string>
   children: React.ReactNode
   className?: string
   confirm?: string
+  resetOnSuccess?: boolean
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(action, null, confirm)
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (resetOnSuccess && state?.ok) form.current?.reset()
+  }, [state, resetOnSuccess])
   return (
-    <form onSubmit={onSubmit} className={className}>
+    <form ref={form} onSubmit={onSubmit} className={className}>
       <PendingProvider value={pending}>
         {Object.entries(hidden).map(([k, v]) => (
           <input key={k} type="hidden" name={k} value={v} />
