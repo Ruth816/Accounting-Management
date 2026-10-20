@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims()
   const path = request.nextUrl.pathname
-  if (!data?.claims && !path.startsWith('/login') && !path.startsWith('/api/cron')) {
+  if (!data?.claims && !path.startsWith('/login') && !path.startsWith('/api/cron') && path !== '/api/health') {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.search = ''
