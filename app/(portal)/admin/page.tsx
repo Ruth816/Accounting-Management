@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
-import { adminCreateUser, adminLookup, adminUpdateUser, sendQueuedSmsNow } from '@/app/actions'
-import { ROLE_LABEL, ROLES } from '@/lib/labels'
+import { adminCreateUser, adminLookup, sendQueuedSmsNow } from '@/app/actions'
+import { UserRow } from '@/components/UserRow'
 import { fmtDateTime } from '@/lib/format'
 import { smsCredit } from '@/lib/sms'
 import type { Lookup, Notification, Profile } from '@/lib/types'
@@ -56,59 +56,26 @@ export default async function AdminPage() {
 
       <section className="card">
         <h2>Users</h2>
-        <div className="users">
-          {profiles.map((u) => (
-            <ActionForm key={u.id} action={adminUpdateUser} hidden={{ id: u.id }} className="user-row">
-              <div className="grid">
-                <label className="field">
-                  <span className="label">Name</span>
-                  <input name="full_name" defaultValue={u.full_name} />
-                </label>
-                <label className="field">
-                  <span className="label">Email</span>
-                  <input value={u.email} readOnly disabled />
-                </label>
-                <label className="field">
-                  <span className="label">Mobile (SMS)</span>
-                  <input name="mobile_no" defaultValue={u.mobile_no ?? ''} placeholder="09171234567" />
-                </label>
-                <label className="field">
-                  <span className="label">Default payment approver</span>
-                  <select name="default_payment_approver" defaultValue={u.default_payment_approver ?? ''}>
-                    <option value="">None</option>
-                    {pas.filter((p) => p.id !== u.id).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span className="label">Default fund approver</span>
-                  <select name="default_fund_approver" defaultValue={u.default_fund_approver ?? ''}>
-                    <option value="">None</option>
-                    {fas.filter((p) => p.id !== u.id).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <fieldset className="roles">
-                <legend className="label">Roles</legend>
-                {ROLES.map((r) => (
-                  <label key={r} className="check">
-                    <input type="checkbox" name="roles" value={r} defaultChecked={u.roles.includes(r)} /> {ROLE_LABEL[r]}
-                  </label>
-                ))}
-                <label className="check">
-                  <input type="checkbox" name="active" defaultChecked={u.active} /> Active
-                </label>
-              </fieldset>
-              <Submit className="btn small">Save</Submit>
-            </ActionForm>
-          ))}
+        <div className="table-wrap">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Mobile (SMS)</th>
+                <th>Roles</th>
+                <th>Default payment approver</th>
+                <th>Default fund approver</th>
+                <th>Active</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {profiles.map((u) => (
+                <UserRow key={u.id} user={u} pas={pas} fas={fas} />
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

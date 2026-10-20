@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getMe } from '@/lib/auth'
 import { signOut } from '@/app/actions'
+import { RefreshButton } from '@/components/RefreshButton'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { supabase, me, is } = await getMe()
@@ -26,6 +27,7 @@ export default async function PortalLayout({ children }: { children: React.React
           {is('admin') && <Link href="/admin">Admin</Link>}
         </nav>
         <div className="me">
+          <RefreshButton />
           <Link href="/account" className="muted small">
             {me.full_name}
           </Link>
