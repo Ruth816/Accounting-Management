@@ -1,8 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { supabaseConfigProblem } from './config'
 
 // Refreshes the Supabase session cookie and sends signed-out visitors to /login.
 export async function updateSession(request: NextRequest) {
+  const problem = supabaseConfigProblem()
+  if (problem) {
+    if (request.nextUrl.pathname === '/api/health') return NextResponse.next({ request })
+    return new NextResponse(
+      `<!doctype html><meta charset="utf-8"><title>Setup needed</title>` +
+        `<body style="font-family:system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">` +
+        `<h1>The portal is not set up correctly</h1><p>${problem}</p>` +
+        `<p>Fix it in Vercel under Settings &rarr; Environment Variables, then redeploy. ` +
+        `<a href="/api/health">Setup check</a></p></body>`,
+      { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } },
+    )
+  }
+
   let response = NextResponse.next({ request })
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
