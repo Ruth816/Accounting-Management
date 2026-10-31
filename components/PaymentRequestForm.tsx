@@ -190,6 +190,7 @@ export function PaymentRequestForm({
               <option value="D/P">D/P down payment</option>
               <option value="PB">PB progress billing</option>
               <option value="FB">FB final billing</option>
+              <option value="FP">FP full payment (100%)</option>
             </select>
           </Field>
           <Field label="Reference of last payment">
