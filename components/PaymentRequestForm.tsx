@@ -26,6 +26,7 @@ export function PaymentRequestForm({
     savePaymentRequest,
     initialError ? { error: initialError } : null,
   )
+  const [poMode, setPoMode] = useState(pr?.po_mode?.split(' ')[0] ?? '')
   const [rows, setRows] = useState<Row[]>(
     pr?.items.length
       ? pr.items.map((i) => ({ description: i.description, amount: i.amount === null ? '' : String(i.amount) }))
@@ -185,7 +186,7 @@ export function PaymentRequestForm({
             <input name="po_amount" inputMode="decimal" className="num" defaultValue={pr?.po_amount ?? ''} />
           </Field>
           <Field label="Mode of payment">
-            <select name="po_mode" defaultValue={pr?.po_mode ?? ''}>
+            <select name="po_mode" value={poMode} onChange={(e) => setPoMode(e.target.value)}>
               <option value="">None</option>
               <option value="D/P">D/P down payment</option>
               <option value="PB">PB progress billing</option>
@@ -193,6 +194,20 @@ export function PaymentRequestForm({
               <option value="FP">FP full payment (100%)</option>
             </select>
           </Field>
+          {poMode === 'PB' && (
+            <Field label="Progress billing no.">
+              <input
+                name="po_progress_no"
+                type="number"
+                min={1}
+                step={1}
+                required
+                className="num"
+                placeholder="1"
+                defaultValue={pr?.po_mode?.split(' ')[1] ?? ''}
+              />
+            </Field>
+          )}
           <Field label="Reference of last payment">
             <input name="last_payment_ref" defaultValue={pr?.last_payment_ref ?? ''} />
           </Field>

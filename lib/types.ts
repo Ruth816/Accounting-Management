@@ -65,7 +65,7 @@ export interface PaymentRequest {
   po_num: string | null
   po_date: string | null
   po_amount: number | null
-  po_mode: 'D/P' | 'PB' | 'FB' | 'FP' | null
+  po_mode: string | null // D/P, PB <n>, FB or FP
   last_payment_ref: string | null
   wtax_rate: number
   bank_transfer_fee: number | null

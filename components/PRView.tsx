@@ -1,4 +1,5 @@
 import { fmtDate, money } from '@/lib/format'
+import { poModeLabel } from '@/lib/labels'
 import type { PaymentRequest } from '@/lib/types'
 
 // Read-only payment request, laid out like the paper form.
@@ -26,7 +27,7 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
     ['PO num', pr.po_num],
     ['PO date', fmtDate(pr.po_date)],
     ['PO amount', pr.po_amount === null ? null : money(pr.po_amount)],
-    ['Mode of payment', pr.po_mode],
+    ['Mode of payment', poModeLabel(pr.po_mode)],
     ['Reference of last payment', pr.last_payment_ref],
   ]
   return (

@@ -68,6 +68,11 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     'po_num', 'po_date', 'po_amount', 'po_mode', 'last_payment_ref', 'wtax_rate', 'bank_transfer_fee',
   ]
   const payload: Record<string, unknown> = Object.fromEntries(fields.map((k) => [k, str(fd, k)]))
+  if (payload.po_mode === 'PB') {
+    const no = str(fd, 'po_progress_no')
+    if (!no || !/^[1-9]\d*$/.test(no)) return { error: 'Enter the progress billing no. (1, 2, 3 …).' }
+    payload.po_mode = `PB ${no}`
+  }
   payload.reimbursable = fd.get('reimbursable') === 'true'
   payload.terms_accepted = fd.get('terms_accepted') === 'on'
   const amounts = fd.getAll('item_amount').map(String)
