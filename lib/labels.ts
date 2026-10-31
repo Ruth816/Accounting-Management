@@ -53,3 +53,17 @@ export const TERMS = [
   'For an unused or cancelled cheque, return the cheque to the Accounting Department immediately, to avoid penalties.',
   'If a cash cheque or cash is lost, the bearer or requestor is 100% liable and must refund or return the entire amount requested to the company within three (3) days.',
 ]
+
+const PO_MODE_LABEL: Record<string, string> = {
+  'D/P': 'D/P down payment',
+  FB: 'FB final billing',
+  FP: 'FP full payment (100%)',
+}
+
+// "PB 2" -> "PB progress billing 2"
+export function poModeLabel(mode: string | null) {
+  if (!mode) return null
+  const [code, no] = mode.split(' ')
+  if (code === 'PB') return no ? `PB progress billing ${no}` : 'PB progress billing'
+  return PO_MODE_LABEL[code] ?? mode
+}
