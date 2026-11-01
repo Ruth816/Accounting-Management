@@ -22,7 +22,7 @@ export function FundRequestForm({
   cheques: ChequeOption[]
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(saveFundRequest)
-  const manual = fr.payment_request_id === null // auto debit: fields are typed
+  const manual = fr.payment_request_id === null // auto debit or check payment: fields are typed
   const list = (l: Lookup['list']) => lookups.filter((x) => x.list === l && x.active)
 
   const [method, setMethod] = useState(fr.payment_method ?? '')

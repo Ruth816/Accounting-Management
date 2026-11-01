@@ -95,8 +95,12 @@ export default async function Dashboard() {
             title="Fund requests you are preparing"
             count={preparing?.data?.length}
             action={
-              <ActionForm action={requestAction} hidden={{ op: 'new_auto_debit' }}>
-                <Submit className="btn small">New auto debit request</Submit>
+              <ActionForm action={requestAction} className="row">
+                <select name="op" aria-label="Fund request type" defaultValue="new_auto_debit">
+                  <option value="new_auto_debit">1 · Auto debit request</option>
+                  <option value="new_check_payment">6 · Check payment request</option>
+                </select>
+                <Submit className="btn small">New fund request</Submit>
               </ActionForm>
             }
           >

@@ -46,6 +46,7 @@ export const REQUEST_TYPE_LABEL: Record<number, string> = {
   3: 'VisMin fund request',
   4: 'NCR reimbursable fund request',
   5: 'VisMin reimbursable fund request',
+  6: 'Check payment request',
 }
 
 export const TERMS = [
