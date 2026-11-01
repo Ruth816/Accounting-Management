@@ -305,5 +305,24 @@ select t.eq((select count(*)::int from fund_requests f where not exists (
   select 1 from payment_requests p where p.id = f.payment_request_id and p.requestor_id = t.uid('req'))), 0,
   'only the funding of their own requests');
 
+-- Every Payment Approver sees all submitted requests and can approve any of them.
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'appr2@x.test', '{"full_name":"Second Approver"}');
+update profiles set roles = '{payment_approver}' where email = 'appr2@x.test';
+set role authenticated;
+select t.as_user('req');
+insert into ids values ('apr', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Any approver', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 75)))));
+select t.as_user('appr2');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='apr')), 0, 'approvers cannot see someone else''s draft');
+select t.as_user('req');
+select submit_payment_request((select v from ids where k='apr'));
+select t.as_user('appr2');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='apr')), 1, 'any approver sees a submitted request');
+select t.eq((select count(*)::int from payment_requests where requestor_id = t.uid('req') and status <> 'draft') > 1, true, 'approver sees every requestor''s entries');
+select approve_payment_request((select v from ids where k='apr'));
+select t.eq((select approver_id from payment_requests where id = (select v from ids where k='apr')), t.uid('appr2'), 'the approver who approved is recorded');
+
 \o
 \echo ALL TESTS PASSED

@@ -76,8 +76,10 @@ export async function summaryAccess(kind: SummaryKind, approverParam?: string) {
   const { me, is } = await getMe()
   const role = KIND_INFO[kind].role
   const allowed = is(role) || is('admin')
-  const isAdmin = is('admin')
-  let approver: string | 'all' = is(role) ? me.id : 'all'
+  // Payment Approvers see every approver's approvals (Ruth, 1 November);
+  // Admins can pick on both pages. isAdmin here means "may pick an approver".
+  const isAdmin = is('admin') || (kind === 'payments' && is(role))
+  let approver: string | 'all' = is(role) && kind === 'funding' ? me.id : 'all'
   if (isAdmin && approverParam === 'all') approver = 'all'
   else if (isAdmin && approverParam && /^[0-9a-f-]{36}$/i.test(approverParam)) approver = approverParam
   const { people, name } = await getDirectory()

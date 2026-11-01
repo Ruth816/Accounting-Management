@@ -53,7 +53,7 @@ export default async function PaymentRequestPage({
 
   const mine = pr.requestor_id === me.id
   const editable = mine && (pr.status === 'draft' || pr.status === 'returned_to_requestor')
-  const canApprove = is('payment_approver') && pr.approver_id === me.id && !mine && pr.status === 'pending_payment_approval'
+  const canApprove = is('payment_approver') && !mine && pr.status === 'pending_payment_approval'
   const canReceive = is('fund_requestor') && pr.status === 'approved_awaiting_funding'
   const funded = fr && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   const canLiquidate = mine && pr.payment_type === 'Cash' && funded && !pr.liquidated_on

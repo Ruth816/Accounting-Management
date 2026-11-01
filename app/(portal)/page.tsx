@@ -20,7 +20,7 @@ export default async function Dashboard() {
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
     is('payment_approver')
-      ? supabase.from('payment_requests').select('*').eq('approver_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
+      ? supabase.from('payment_requests').select('*').neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
       : null,
     is('fund_requestor')
       ? supabase.from('payment_requests').select('*').eq('status', 'approved_awaiting_funding').order('approved_on')
@@ -47,7 +47,7 @@ export default async function Dashboard() {
   const action: StatCard[] = []
   const progress: StatCard[] = []
   const done: StatCard[] = []
-  if (is('payment_approver')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting your approval', href: '#approve-pr' })
+  if (is('payment_approver')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting approval', href: '#approve-pr' })
   if (is('fund_approver')) action.push({ value: toFundApprove?.data?.length ?? 0, label: 'fund requests awaiting your approval', href: '#approve-fr' })
   if (is('fund_requestor')) {
     action.push({ value: toReceive?.data?.length ?? 0, label: 'approved requests to receive for funding', href: '#receive' })
@@ -69,8 +69,8 @@ export default async function Dashboard() {
   }
   if (is('payment_approver')) {
     const { count: n } = await supabase.from('payment_requests').select('id', { count: 'exact', head: true })
-      .eq('approver_id', me.id).gte('approved_on', todayStart).neq('status', 'cancelled')
-    done.push({ value: n ?? 0, label: 'payment requests you approved today · open the summary', href: '/summary/payments' })
+      .gte('approved_on', todayStart).neq('status', 'cancelled')
+    done.push({ value: n ?? 0, label: 'payment requests approved today · open the summary', href: '/summary/payments' })
   }
   const company: StatCard[] = is('admin')
     ? [
@@ -121,8 +121,8 @@ export default async function Dashboard() {
         ))}
 
       {is('payment_approver') && (
-        <Queue id="approve-pr" title="Waiting for your approval" count={toApprove?.data?.length}>
-          <PRTable rows={(toApprove?.data ?? []) as PaymentRequest[]} name={name} empty="No requests waiting for you." />
+        <Queue id="approve-pr" title="Waiting for payment approval" count={toApprove?.data?.length}>
+          <PRTable rows={(toApprove?.data ?? []) as PaymentRequest[]} name={name} empty="No requests waiting for approval." />
         </Queue>
       )}
 
