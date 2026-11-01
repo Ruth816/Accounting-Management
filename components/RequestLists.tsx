@@ -35,6 +35,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
         name={name}
         regions={reg === 'all' ? REGIONS : [reg]}
         canDelete={(r) => PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))}
+        canEdit={(r) => r.requestor_id === me.id && ['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status)}
       />
     </div>
   )
@@ -67,6 +68,7 @@ export async function FundRequestList({ title, sub, statuses, base, region }: Li
         rows={rows}
         regions={reg === 'all' ? REGIONS : [reg]}
         canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
+        canEdit={(f) => is('fund_requestor') && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
       />
     </div>
   )
