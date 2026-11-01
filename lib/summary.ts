@@ -86,7 +86,7 @@ export async function summaryAccess(kind: SummaryKind, approverParam?: string) {
   else if (isAdmin && approverParam && /^[0-9a-f-]{36}$/i.test(approverParam)) approver = approverParam
   const { people, name } = await getDirectory()
   const approvers = people.filter((p) => p.roles.includes(role))
-  return { allowed, isAdmin, approver, approvers, name, me }
+  return { allowed, isAdmin, approver, approvers, name, me, canPost: is('fund_approver') }
 }
 
 // Every approval in the calendar year of `day`.
