@@ -219,7 +219,19 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 .sig-line { border-bottom: 1px solid var(--text); min-height: 28px; padding-bottom: 2px; font-weight: 600; }
 .voucher-head h2 { font-size: 1.2rem; margin: 0; }
 
+/* Approval summaries */
+.summary .stat-card .stat-value { font-size: 1.35rem; overflow-wrap: anywhere; }
+.summary-controls { align-items: flex-end; gap: 12px; }
+.summary-downloads { gap: 8px; }
+tfoot td { font-weight: 600; border-bottom: 0; }
+tfoot tr.muted td { font-weight: 400; color: var(--muted); }
+tfoot tr.total-row td { border-top: 2px solid var(--border); font-size: 1rem; }
+tr.selected td { background: rgba(79, 70, 229, 0.12); }
+.print-only { display: none; }
+
 @media print {
+  .print-only { display: block; color: #000; }
+  tr.selected td { background: none; }
   :root { color-scheme: light; --bg: #fff; --surface: #fff; --input: #fff; --text: #000; --muted: #444; --border: #bbb; --link: #000; }
   .sidebar, .signed-in, .no-print { display: none !important; }
   .shell { display: block; }
