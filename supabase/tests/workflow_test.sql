@@ -243,5 +243,16 @@ select t.eq((select mobile_no from profiles where id = t.uid('req2')), '63917123
 select t.as_user('req2');
 select t.expect_error(format('select admin_update_user(%L, %L)', t.uid('req2'), '{"roles":["admin"]}'), 'Admin role');
 
+-- Check payment request (type 6): started by a Fund Requestor, paid by cheque, Ref no. prefix 6.
+select t.as_user('fr');
+insert into ids values ('cp', create_check_payment_request());
+select t.eq((select request_type::int from fund_requests where id = (select v from ids where k='cp')), 6, 'check payment request is type 6');
+select t.eq((select payment_method from fund_requests where id = (select v from ids where k='cp')), 'Check', 'check payment request defaults to Check');
+select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='cp')), 'Ref no. is required.*Choose or enter a cheque');
+reset role;
+update fund_requests set ref_no = '1- 2026 10 0999' where id = (select v from ids where k='cp');
+set role authenticated;
+select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='cp')), 'must start with 6-');
+
 \o
 \echo ALL TESTS PASSED
