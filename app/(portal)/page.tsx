@@ -3,6 +3,7 @@ import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP } from '@/lib/labels'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
 import { todayManila } from '@/lib/summary'
+import { GroupedFR, GroupedPR } from '@/components/Grouped'
 import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
@@ -122,13 +123,21 @@ export default async function Dashboard() {
 
       {is('payment_approver') && (
         <Queue id="approve-pr" title="Waiting for payment approval" count={toApprove?.data?.length}>
-          <PRTable rows={(toApprove?.data ?? []) as PaymentRequest[]} name={name} empty="No requests waiting for approval." />
+          {toApprove?.data?.length ? (
+            <GroupedPR rows={toApprove.data as PaymentRequest[]} name={name} />
+          ) : (
+            <p className="muted">No requests waiting for approval.</p>
+          )}
         </Queue>
       )}
 
       {is('fund_approver') && (
         <Queue id="approve-fr" title="Fund requests waiting for your approval" count={toFundApprove?.data?.length}>
-          <FRTable rows={(toFundApprove?.data ?? []) as FundRequest[]} empty="No fund requests waiting for you." />
+          {toFundApprove?.data?.length ? (
+            <GroupedFR rows={toFundApprove.data as FundRequest[]} />
+          ) : (
+            <p className="muted">No fund requests waiting for you.</p>
+          )}
         </Queue>
       )}
 

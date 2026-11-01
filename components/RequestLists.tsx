@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
-import { FRTable, PRTable } from './Tables'
+import { GroupedFR, GroupedPR, REGIONS, RegionTabs, frRegion, parseRegion, prRegion } from './Grouped'
 import { FR_OPEN_STATUSES, PR_DELETABLE } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Payment requests in the given statuses that the user may see. Other people's drafts stay hidden.
-export async function PaymentRequestList({ title, sub, statuses }: { title: string; sub: string; statuses: string[] }) {
+type ListProps = { title: string; sub: string; statuses: string[]; base: string; region?: string }
+
+export async function PaymentRequestList({ title, sub, statuses, base, region }: ListProps) {
   const { supabase, me, is } = await getMe()
   const { name } = await getDirectory()
   const { data } = await supabase
@@ -16,25 +18,29 @@ export async function PaymentRequestList({ title, sub, statuses }: { title: stri
     .order('updated_at', { ascending: false })
     .limit(200)
   const rows = (data ?? []) as PaymentRequest[]
+  const reg = parseRegion(region)
   return (
     <div className="stack">
       <div>
         <h1 className="page-title">{title}</h1>
         <p className="page-sub">{sub}</p>
       </div>
-      <section className="card">
-        <PRTable
-          rows={rows}
-          name={name}
-          empty="Nothing here yet."
-          canDelete={(r) => PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))}
-        />
-      </section>
+      <RegionTabs
+        base={base}
+        current={reg}
+        counts={{ all: rows.length, NCR: rows.filter((r) => prRegion(r) === 'NCR').length, VisMin: rows.filter((r) => prRegion(r) === 'VisMin').length }}
+      />
+      <GroupedPR
+        rows={rows}
+        name={name}
+        regions={reg === 'all' ? REGIONS : [reg]}
+        canDelete={(r) => PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))}
+      />
     </div>
   )
 }
 
-export async function FundRequestList({ title, sub, statuses }: { title: string; sub: string; statuses: string[] }) {
+export async function FundRequestList({ title, sub, statuses, base, region }: ListProps) {
   const { supabase, is } = await getMe()
   if (!(is('fund_requestor') || is('fund_approver') || is('admin'))) notFound()
   const mayDelete = is('fund_requestor') || is('admin')
@@ -45,19 +51,23 @@ export async function FundRequestList({ title, sub, statuses }: { title: string;
     .order('updated_at', { ascending: false })
     .limit(200)
   const rows = (data ?? []) as FundRequest[]
+  const reg = parseRegion(region)
   return (
     <div className="stack">
       <div>
         <h1 className="page-title">{title}</h1>
         <p className="page-sub">{sub}</p>
       </div>
-      <section className="card">
-        <FRTable
-          rows={rows}
-          empty="Nothing here yet."
-          canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
-        />
-      </section>
+      <RegionTabs
+        base={base}
+        current={reg}
+        counts={{ all: rows.length, NCR: rows.filter((f) => frRegion(f) === 'NCR').length, VisMin: rows.filter((f) => frRegion(f) === 'VisMin').length }}
+      />
+      <GroupedFR
+        rows={rows}
+        regions={reg === 'all' ? REGIONS : [reg]}
+        canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
+      />
     </div>
   )
 }
