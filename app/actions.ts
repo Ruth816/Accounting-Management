@@ -123,11 +123,21 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
     amount: lineAmounts[i] ?? '',
     category: lineCategories[i] ?? '',
   }))
+  if (hasLines) {
+    // Also filled here so the request is complete even before the items update is run in Supabase.
+    const used = lines.filter((l) => l.description.trim() || l.amount.trim() || l.category.trim())
+    const sum = used.reduce((t, l) => t + (Number(l.amount.replace(/,/g, '')) || 0), 0)
+    payload.description =
+      used.length === 1 ? used[0].description.trim() : used.map((l, i) => `${i + 1}. ${l.description.trim()}`).join('\n') || null
+    payload.original_amount = used.some((l) => l.amount.trim()) ? sum.toFixed(2) : null
+    payload.category = used[0]?.category || null
+  }
   const { error } = await supabase.rpc('save_fund_request', { p_id: id, p: payload })
   if (error) return { error: error.message }
   if (hasLines) {
     const { error: e3 } = await supabase.rpc('save_fund_lines', { p_id: id, p_lines: lines })
-    if (e3) return { error: e3.message }
+    // PGRST202: the items update has not been run in Supabase yet.
+    if (e3 && e3.code !== 'PGRST202') return { error: e3.message }
   }
   if (intent === 'submit') {
     const { error: e2 } = await supabase.rpc('submit_fund_request', { p_id: id })
