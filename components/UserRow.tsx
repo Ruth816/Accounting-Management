@@ -27,6 +27,14 @@ export function UserRow({ user, pas, fas }: { user: Profile; pas: Profile[]; fas
             </label>
           ))}
         </div>
+        <label className="field small">
+          <span className="label">Region (requestors see only this)</span>
+          <select form={f} name="region" defaultValue={user.region ?? ''}>
+            <option value="">Both regions</option>
+            <option value="NCR">NCR only</option>
+            <option value="VisMin">VisMin only</option>
+          </select>
+        </label>
       </td>
       <td>
         <label className="field small">

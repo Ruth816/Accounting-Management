@@ -436,5 +436,35 @@ select t.eq((select status::text from payment_requests where id = (select v from
 select t.as_user('adm');
 select admin_set_routes('{}'::jsonb);
 
+-- Region lock: an NCR requestor sees and files only NCR; VisMin only VisMin.
+select t.as_user('adm');
+select admin_update_user(t.uid('req2'), jsonb_build_object('roles', jsonb_build_array('payment_requestor'), 'region', 'VisMin'));
+select admin_update_user(t.uid('fr'), jsonb_build_object('roles', jsonb_build_array('fund_requestor'), 'region', 'NCR'));
+select t.eq((select region from profiles where id = t.uid('fr')), 'NCR', 'Admin sets a requestor''s region');
+select t.as_user('req2');
+insert into ids values ('vr', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Tries NCR', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
+  'approver_id', t.uid('appr'), 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 10)))));
+select t.eq((select region from payment_requests where id = (select v from ids where k='vr')), 'VisMin', 'VisMin requestor''s request stays VisMin');
+select t.as_user('fr');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rv')), 0, 'NCR fund requestor cannot see a VisMin payment request');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn2')), 1, 'NCR fund requestor sees an NCR payment request');
+select t.eq(can_see_pr((select v from ids where k='rv')), false, 'can_see_pr follows the region');
+select t.expect_error(format('select receive_payment_request(%L)', (select v from ids where k='rv')), 'another region');
+insert into ids values ('nfr', receive_payment_request((select v from ids where k='rn2')));
+select t.eq((select region from fund_requests where id = (select v from ids where k='nfr')), 'NCR', 'NCR fund requestor receives NCR');
+select t.as_user('adm');
+insert into ids values ('vfr', receive_payment_request((select v from ids where k='rv')));
+select t.as_user('fr');
+select t.eq((select count(*)::int from fund_requests where id = (select v from ids where k='vfr')), 0, 'NCR fund requestor cannot see a VisMin fund request');
+select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='vfr'), '{}'), 'another region|not found');
+select t.as_user('hm');
+select t.eq((select count(*)::int from payment_requests where id in ((select v from ids where k='rv'), (select v from ids where k='rn2'))), 2, 'approvers see every region');
+select t.as_user('adm');
+select t.eq((select count(*)::int from fund_requests where id in ((select v from ids where k='vfr'), (select v from ids where k='nfr'))), 2, 'Admin sees every region');
+reset role;
+update profiles set region = null where email in ('req2@x.test', 'fr@x.test');
+set role authenticated;
+
 \o
 \echo ALL TESTS PASSED

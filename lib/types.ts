@@ -24,6 +24,7 @@ export interface Profile {
   mobile_no: string | null
   default_payment_approver: string | null
   default_fund_approver: string | null
+  region: 'NCR' | 'VisMin' | null
   active: boolean
 }
 

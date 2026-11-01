@@ -236,6 +236,7 @@ export async function adminUpdateUser(_: ActionState, fd: FormData): Promise<Act
         mobile_no: str(fd, 'mobile_no'),
         default_payment_approver: str(fd, 'default_payment_approver'),
         default_fund_approver: str(fd, 'default_fund_approver'),
+        region: str(fd, 'region'),
         active: fd.get('active') === 'on',
       },
     })

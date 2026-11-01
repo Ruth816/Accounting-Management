@@ -13,7 +13,11 @@ export const getMe = cache(async () => {
   if (!profile || !profile.active) redirect('/login?inactive=1')
   // An Admin covers every role (Ruth, 1 November), so is() is true for them.
   const is = (r: Role) => profile.roles.includes(r) || profile.roles.includes('admin')
-  return { supabase, me: profile, is }
+  // Requestors with a region see only that region (Ruth, 1 November).
+  // Approvers and Admins always see every region.
+  const limited = !profile.roles.some((r) => r === 'admin' || r === 'payment_approver' || r === 'fund_approver')
+  const myRegion = limited ? (profile.region ?? null) : null
+  return { supabase, me: profile, is, myRegion }
 })
 
 export const getDirectory = cache(async () => {
