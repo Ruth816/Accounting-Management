@@ -48,6 +48,7 @@ export interface PaymentRequest {
   status: Status
   version: number
   reimbursable: boolean
+  request_kind: 'regular' | 'auto_debit' | 'reimbursable'
   region: 'NCR' | 'VisMin'
   project_name: string | null
   project_type: string | null
@@ -94,6 +95,7 @@ export interface PaymentRequest {
 export interface FundRequest {
   id: string
   request_type: 1 | 2 | 3 | 4 | 5
+  region: 'NCR' | 'VisMin' | null
   payment_request_id: string | null
   fund_requestor_id: string
   fund_approver_id: string | null

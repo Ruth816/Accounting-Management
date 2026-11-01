@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { FRTable, PRTable } from './Tables'
 import { fmtTotals } from '@/lib/summary'
+import { PR_KIND_LABEL } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Requests split by region (NCR / VisMin) and, inside each, by kind:
@@ -10,16 +11,19 @@ export type Region = 'NCR' | 'VisMin'
 export const REGIONS: Region[] = ['NCR', 'VisMin']
 type Kind = 'regular' | 'auto' | 'reimb'
 const KIND_LABEL: Record<Kind, string> = {
-  regular: 'Regular fund request (check payment)',
-  auto: 'Auto debit request',
-  reimb: 'Reimbursables',
+  regular: PR_KIND_LABEL.regular,
+  auto: PR_KIND_LABEL.auto_debit,
+  reimb: PR_KIND_LABEL.reimbursable,
 }
 
 export const prRegion = (r: PaymentRequest): Region => (r.region === 'VisMin' ? 'VisMin' : 'NCR')
-const prKind = (r: PaymentRequest): Kind => (r.reimbursable ? 'reimb' : 'regular')
-// Fund request types: 1 auto debit (no region; listed under NCR), 2 NCR regular,
-// 3 VisMin regular, 4 NCR reimbursable, 5 VisMin reimbursable.
-export const frRegion = (f: FundRequest): Region => (f.request_type === 3 || f.request_type === 5 ? 'VisMin' : 'NCR')
+const prKind = (r: PaymentRequest): Kind =>
+  r.request_kind === 'auto_debit' ? 'auto' : r.request_kind === 'reimbursable' || r.reimbursable ? 'reimb' : 'regular'
+// Fund request types: 1 auto debit, 2 NCR regular, 3 VisMin regular,
+// 4 NCR reimbursable, 5 VisMin reimbursable. Region comes from the payment
+// request; a standalone auto debit or check payment request has none and is listed under NCR.
+export const frRegion = (f: FundRequest): Region =>
+  f.region === 'VisMin' || f.request_type === 3 || f.request_type === 5 ? 'VisMin' : 'NCR'
 const frKind = (f: FundRequest): Kind => (f.request_type === 1 ? 'auto' : f.request_type >= 4 ? 'reimb' : 'regular')
 
 export function parseRegion(v: string | undefined): Region | 'all' {
@@ -65,7 +69,7 @@ export function GroupedPR({
   regions?: Region[]
   canDelete?: (r: PaymentRequest) => boolean
 }) {
-  const kinds: Kind[] = ['regular', 'reimb']
+  const kinds: Kind[] = ['regular', 'auto', 'reimb']
   return (
     <>
       {regions.map((reg) => {
@@ -112,7 +116,6 @@ export function GroupedFR({
             </h2>
             {kinds.map((k) => {
               const rs = inRegion.filter((f) => frKind(f) === k)
-              if (k === 'auto' && reg === 'VisMin' && !rs.length) return null
               const total = fmtTotals({ PHP: rs.reduce((t, f) => t + Number(f.amount_php ?? 0), 0) })
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>

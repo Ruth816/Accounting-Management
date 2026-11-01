@@ -324,5 +324,29 @@ select t.eq((select count(*)::int from payment_requests where requestor_id = t.u
 select approve_payment_request((select v from ids where k='apr'));
 select t.eq((select approver_id from payment_requests where id = (select v from ids where k='apr')), t.uid('appr2'), 'the approver who approved is recorded');
 
+-- Request type on payment requests: regular / auto debit / reimbursable.
+select t.as_user('req');
+insert into ids values ('kad', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Meralco', 'purpose', 'Auto debit bill', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'request_kind', 'auto_debit', 'region', 'VisMin',
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 300)))));
+insert into ids values ('krb', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Client', 'purpose', 'Reimbursable', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'request_kind', 'reimbursable',
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 40)))));
+select t.eq((select reimbursable from payment_requests where id = (select v from ids where k='krb')), true, 'reimbursable kind sets reimbursable');
+select submit_payment_request((select v from ids where k='kad'));
+select submit_payment_request((select v from ids where k='krb'));
+select t.as_user('appr');
+select approve_payment_request((select v from ids where k='kad'));
+select approve_payment_request((select v from ids where k='krb'));
+select t.as_user('fr');
+insert into ids values ('fkad', receive_payment_request((select v from ids where k='kad')));
+insert into ids values ('fkrb', receive_payment_request((select v from ids where k='krb')));
+select t.eq((select array[request_type::text, payment_method, region] from fund_requests where id = (select v from ids where k='fkad')),
+            array['1', 'Direct Debit', 'VisMin'], 'auto debit payment request gives fund type 1, Direct Debit, its region');
+select t.eq((select array[request_type::text, region] from fund_requests where id = (select v from ids where k='fkrb')),
+            array['4', 'NCR'], 'reimbursable NCR gives fund type 4');
+
 \o
 \echo ALL TESTS PASSED

@@ -73,7 +73,8 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     if (!no || !/^[1-9]\d*$/.test(no)) return { error: 'Enter the progress billing no. (1, 2, 3 …).' }
     payload.po_mode = `PB ${no}`
   }
-  payload.reimbursable = fd.get('reimbursable') === 'true'
+  payload.request_kind = str(fd, 'request_kind') ?? 'regular'
+  payload.reimbursable = payload.request_kind === 'reimbursable'
   payload.terms_accepted = fd.get('terms_accepted') === 'on'
   const amounts = fd.getAll('item_amount').map(String)
   payload.items = fd.getAll('item_description').map((d, i) => ({ description: String(d), amount: amounts[i] ?? '' }))
