@@ -17,6 +17,7 @@ export function PaymentRequestForm({
   requestorName,
   initialError,
   lockedRegion,
+  nextReqNo,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
@@ -25,6 +26,7 @@ export function PaymentRequestForm({
   requestorName: string
   initialError?: string
   lockedRegion?: 'NCR' | 'VisMin' | null
+  nextReqNo?: string | null
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(
     savePaymentRequest,
@@ -53,8 +55,9 @@ export function PaymentRequestForm({
       <section className="card">
         <h2>Request details</h2>
         <div className="grid">
-          <Field label="Payment REQ No.">
-            <input value={pr?.req_no ?? 'Given on first save'} readOnly disabled />
+          <Field label="Payment REQ No." hint={pr ? undefined : 'Automatic, in the order requests are saved'}>
+            <input value={pr?.req_no ?? nextReqNo ?? 'Given on first save'} readOnly disabled />
+            {!pr && nextReqNo && <input type="hidden" name="preview_req_no" value={nextReqNo} />}
           </Field>
           <Field label="Requested by">
             <input value={requestorName} readOnly disabled />

@@ -486,5 +486,11 @@ select t.eq(mark_posted_to_qb(array[(select v from ids where k='fr2')]), 1, 'mar
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='fr2')), 'approved_posted_to_qb', 'status is posted to QuickBooks');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Tick at least one');
 
+-- The next REQ No. shown on the form is the one the next save takes.
+select t.as_user('req');
+create temp table peek as select peek_next_req_no() as n;
+insert into ids values ('pk', save_payment_request(null, '{"payable_to": "Peek"}'::jsonb));
+select t.eq((select req_no from payment_requests where id = (select v from ids where k='pk')), (select n from peek), 'next REQ No. preview matches the saved number');
+
 \o
 \echo ALL TESTS PASSED
