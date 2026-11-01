@@ -41,10 +41,9 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
 // What each self-started fund request type is for (Ruth, 1 November).
-export const REQUEST_TYPE_HELP: Record<number, string> = {
-  1: "Paid straight from the disbursement account with no cheque issued: manager's check (MC), auto deduct, or direct payment to an account.",
-  6: 'Paid by cheque: the funds are withdrawn, or someone is paid, using a cheque.',
-}
+export const AUTO_DEBIT_HELP =
+  "Paid straight from the disbursement account with no cheque issued: manager's check (MC), auto deduct, or direct payment to an account."
+export const CHECK_PAYMENT_HELP = 'Paid by cheque: the funds are withdrawn, or someone is paid, using a cheque.'
 
 export const REQUEST_TYPE_LABEL: Record<number, string> = {
   1: 'Auto debit request',
@@ -52,7 +51,6 @@ export const REQUEST_TYPE_LABEL: Record<number, string> = {
   3: 'VisMin fund request',
   4: 'NCR reimbursable fund request',
   5: 'VisMin reimbursable fund request',
-  6: 'Check payment request',
 }
 
 export const TERMS = [
@@ -73,4 +71,15 @@ export function poModeLabel(mode: string | null) {
   const [code, no] = mode.split(' ')
   if (code === 'PB') return no ? `PB progress billing ${no}` : 'PB progress billing'
   return PO_MODE_LABEL[code] ?? mode
+}
+
+// A type 2 request started by a Fund Requestor (no payment request) is a
+// Check payment request; one received from a payment request is an NCR fund request.
+type FRType = { request_type: number; payment_request_id: string | null }
+export function frTypeLabel(f: FRType) {
+  return f.request_type === 2 && !f.payment_request_id ? 'Check payment request' : REQUEST_TYPE_LABEL[f.request_type]
+}
+export function frTypeHelp(f: FRType) {
+  if (f.payment_request_id) return undefined
+  return f.request_type === 1 ? AUTO_DEBIT_HELP : f.request_type === 2 ? CHECK_PAYMENT_HELP : undefined
 }

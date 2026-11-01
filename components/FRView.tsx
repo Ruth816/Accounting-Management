@@ -1,5 +1,5 @@
 import { fmtDate, money } from '@/lib/format'
-import { REQUEST_TYPE_LABEL } from '@/lib/labels'
+import { frTypeLabel } from '@/lib/labels'
 import type { FundRequest } from '@/lib/types'
 
 // Read-only fund request in QuickBooks Expense order (spec 5.2).
@@ -15,7 +15,7 @@ export function FRView({
   approverName?: string
 }) {
   const rows: [string, React.ReactNode][] = [
-    ['Request type', `${fr.request_type} · ${REQUEST_TYPE_LABEL[fr.request_type]}`],
+    ['Request type', `${fr.request_type} · ${frTypeLabel(fr)}`],
     ['1. Type', 'Expense'],
     ['2. Ref no.', fr.ref_no],
     ['3. Payee', fr.payee],

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { REQUEST_TYPE_HELP } from '@/lib/labels'
+import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP } from '@/lib/labels'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
 import { ActionForm, Submit } from '@/components/ActionForm'
@@ -99,7 +99,7 @@ export default async function Dashboard() {
               <ActionForm action={requestAction} className="row">
                 <select name="op" aria-label="Fund request type" defaultValue="new_auto_debit">
                   <option value="new_auto_debit">1 · Auto debit request</option>
-                  <option value="new_check_payment">6 · Check payment request</option>
+                  <option value="new_check_payment">2 · Check payment request</option>
                 </select>
                 <Submit className="btn small">New fund request</Submit>
               </ActionForm>
@@ -107,10 +107,10 @@ export default async function Dashboard() {
           >
             <ul className="small muted plain type-help">
               <li>
-                <strong>Auto debit request:</strong> {REQUEST_TYPE_HELP[1]}
+                <strong>Auto debit request:</strong> {AUTO_DEBIT_HELP}
               </li>
               <li>
-                <strong>Check payment request:</strong> {REQUEST_TYPE_HELP[6]}
+                <strong>Check payment request:</strong> {CHECK_PAYMENT_HELP}
               </li>
             </ul>
             <FRTable rows={(preparing?.data ?? []) as FundRequest[]} empty="Nothing in preparation." />

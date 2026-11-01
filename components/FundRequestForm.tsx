@@ -5,7 +5,7 @@ import { saveFundRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
 import { Field } from './PaymentRequestForm'
 import { chequeMemo, fundAmounts, money, parseAmount, refNoProblem } from '@/lib/calc'
-import { REQUEST_TYPE_HELP, REQUEST_TYPE_LABEL } from '@/lib/labels'
+import { frTypeHelp, frTypeLabel } from '@/lib/labels'
 import type { FundRequest, Lookup, Person } from '@/lib/types'
 
 export type ChequeOption = { id: string; cheque_no: string; total: number }
@@ -64,8 +64,8 @@ export function FundRequestForm({
         <section className="card">
           <h2>Expense details</h2>
           <div className="grid">
-            <Field label="Request type" hint={REQUEST_TYPE_HELP[fr.request_type]}>
-              <input value={`${fr.request_type} · ${REQUEST_TYPE_LABEL[fr.request_type]}`} readOnly disabled />
+            <Field label="Request type" hint={frTypeHelp(fr)}>
+              <input value={`${fr.request_type} · ${frTypeLabel(fr)}`} readOnly disabled />
             </Field>
             <Field label="1. Type">
               <input value="Expense" readOnly disabled />
