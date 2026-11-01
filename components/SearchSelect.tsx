@@ -12,11 +12,13 @@ export function SearchSelect({
   options,
   defaultValue,
   placeholder = 'Type to search',
+  onChange,
 }: {
   name: string
   options: SearchOption[]
   defaultValue?: string | null
   placeholder?: string
+  onChange?: (value: string) => void
 }) {
   const [value, setValue] = useState(defaultValue ?? '')
   const [text, setText] = useState(options.find((o) => o.value === defaultValue)?.label ?? defaultValue ?? '')
@@ -36,6 +38,7 @@ export function SearchSelect({
 
   const choose = (o: SearchOption) => {
     setValue(o.value)
+    onChange?.(o.value)
     setText(o.label)
     setOpen(false)
   }
@@ -65,7 +68,10 @@ export function SearchSelect({
           setText(e.target.value)
           setOpen(true)
           setActive(0)
-          if (!e.target.value) setValue('')
+          if (!e.target.value) {
+            setValue('')
+            onChange?.('')
+          }
         }}
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown') {
