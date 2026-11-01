@@ -105,6 +105,11 @@ export const PR_KIND_LABEL: Record<string, string> = {
 export const prKindLabel = (r: { request_kind?: string | null; reimbursable: boolean }) =>
   PR_KIND_LABEL[r.request_kind ?? (r.reimbursable ? 'reimbursable' : 'regular')]
 
+// Region of a fund request: from its payment request, else from its type (3/5 VisMin).
+// A standalone auto debit or check payment request has none and counts as NCR.
+export const frRegionOf = (f: { region?: string | null; request_type: number }): 'NCR' | 'VisMin' =>
+  f.region === 'VisMin' || f.request_type === 3 || f.request_type === 5 ? 'VisMin' : 'NCR'
+
 export const PR_DELETABLE: string[] = [
   'draft',
   'pending_payment_approval',

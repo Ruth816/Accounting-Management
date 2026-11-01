@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { StatusBadge } from './StatusBadge'
 import { DeleteButton } from './DeleteButton'
 import { fmtDate, money } from '@/lib/format'
-import { frTypeLabel } from '@/lib/labels'
+import { frRegionOf, frTypeLabel, prKindLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 export function PRTable({
@@ -23,6 +23,8 @@ export function PRTable({
         <thead>
           <tr>
             <th>REQ No.</th>
+            <th>Type</th>
+            <th>Region</th>
             <th>Payable to</th>
             <th>Requested by</th>
             <th className="num">Amount due</th>
@@ -37,6 +39,8 @@ export function PRTable({
               <td>
                 <Link href={`/payment-requests/${r.id}`}>{r.req_no}</Link>
               </td>
+              <td>{prKindLabel(r)}</td>
+              <td>{r.region}</td>
               <td>{r.payable_to}</td>
               <td>{name(r.requestor_id)}</td>
               <td className="num">
@@ -74,6 +78,7 @@ export function FRTable({
           <tr>
             <th>Ref no.</th>
             <th>Type</th>
+            <th>Region</th>
             <th>Payee</th>
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
@@ -88,6 +93,7 @@ export function FRTable({
                 <Link href={`/fund-requests/${f.id}`}>{f.ref_no || 'No Ref no. yet'}</Link>
               </td>
               <td>{frTypeLabel(f)}</td>
+              <td>{frRegionOf(f)}</td>
               <td>{f.payee}</td>
               <td className="num">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td>{fmtDate(f.payment_date)}</td>

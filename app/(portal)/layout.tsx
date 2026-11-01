@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getMe } from '@/lib/auth'
 import { signOut } from '@/app/actions'
 import { RefreshButton } from '@/components/RefreshButton'
+import { UpdateWatcher } from '@/components/UpdateWatcher'
 import { SideNav, type NavSection } from '@/components/SideNav'
 import { ROLE_LABEL } from '@/lib/labels'
 
@@ -86,6 +87,7 @@ export default async function PortalLayout({ children }: { children: React.React
             </form>
           </span>
         </div>
+        <UpdateWatcher current={process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev'} />
         <main className="page">{children}</main>
       </div>
     </div>

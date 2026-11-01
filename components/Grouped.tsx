@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { FRTable, PRTable } from './Tables'
 import { fmtTotals } from '@/lib/summary'
-import { PR_KIND_LABEL } from '@/lib/labels'
+import { PR_KIND_LABEL, frRegionOf } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Requests split by region (NCR / VisMin) and, inside each, by kind:
@@ -22,8 +22,7 @@ const prKind = (r: PaymentRequest): Kind =>
 // Fund request types: 1 auto debit, 2 NCR regular, 3 VisMin regular,
 // 4 NCR reimbursable, 5 VisMin reimbursable. Region comes from the payment
 // request; a standalone auto debit or check payment request has none and is listed under NCR.
-export const frRegion = (f: FundRequest): Region =>
-  f.region === 'VisMin' || f.request_type === 3 || f.request_type === 5 ? 'VisMin' : 'NCR'
+export const frRegion = (f: FundRequest): Region => frRegionOf(f)
 const frKind = (f: FundRequest): Kind => (f.request_type === 1 ? 'auto' : f.request_type >= 4 ? 'reimb' : 'regular')
 
 export function parseRegion(v: string | undefined): Region | 'all' {
