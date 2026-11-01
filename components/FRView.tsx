@@ -24,7 +24,7 @@ export function FRView({
     ['5. Payment method', fr.payment_method],
   ]
   if (fr.payment_method === 'Cash') rows.push(['Cash received by', fr.cash_received_by])
-  if (fr.payment_method === 'Bank transfer' || fr.payment_method === 'Auto debit') {
+  if (fr.payment_method === 'FUND TRANSFER' || fr.payment_method === 'Direct Debit') {
     rows.push(['Bank account name', fr.bank_account_name], ['Bank account number', fr.bank_account_no])
   }
   rows.push(['Original amount', fr.original_amount === null ? null : `${fr.currency} ${money(fr.original_amount)}`])
