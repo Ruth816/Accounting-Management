@@ -83,3 +83,17 @@ export function frTypeHelp(f: FRType) {
   if (f.payment_request_id) return undefined
   return f.request_type === 1 ? AUTO_DEBIT_HELP : f.request_type === 2 ? CHECK_PAYMENT_HELP : undefined
 }
+
+// Sidebar lists: before and after each approval stage.
+export const PR_OPEN_STATUSES = ['draft', 'pending_payment_approval', 'returned_to_requestor', 'expired']
+export const PR_APPROVED_STATUSES = [
+  'approved_awaiting_funding',
+  'in_funding_preparation',
+  'pending_fund_approval',
+  'returned_to_fund_requestor',
+  'approved_ready_for_qb',
+  'approved_posted_to_qb',
+  'sync_failed',
+]
+export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
+export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']

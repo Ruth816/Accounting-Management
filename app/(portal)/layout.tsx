@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { getMe } from '@/lib/auth'
 import { signOut } from '@/app/actions'
 import { RefreshButton } from '@/components/RefreshButton'
+import { SideNav, type NavSection } from '@/components/SideNav'
+import { ROLE_LABEL } from '@/lib/labels'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const { supabase, me, is } = await getMe()
@@ -11,34 +13,60 @@ export default async function PortalLayout({ children }: { children: React.React
     .eq('recipient_id', me.id)
     .eq('read', false)
 
+  const sections: NavSection[] = [
+    {
+      title: 'Requests',
+      items: [
+        { href: '/', label: 'Dashboard', icon: 'dashboard' },
+        { href: '/payment-requests', label: 'Payment requests', icon: 'doc' },
+        { href: '/payment-requests/approved', label: 'Payment approved', icon: 'docCheck' },
+        { href: '/fund-requests', label: 'Fund requests', icon: 'fund' },
+        { href: '/fund-requests/approved', label: 'Fund approved', icon: 'fundCheck' },
+      ],
+    },
+    {
+      title: 'Tools',
+      items: [
+        ...(is('payment_requestor') ? [{ href: '/payment-requests/new', label: 'New payment request', icon: 'plus' as const }] : []),
+        { href: '/search', label: 'Search', icon: 'search' },
+        { href: '/notifications', label: 'Notifications', icon: 'bell', badge: count ?? 0 },
+      ],
+    },
+    ...(is('admin') ? [{ title: 'Administration', items: [{ href: '/admin', label: 'Users & settings', icon: 'admin' as const }] }] : []),
+    { title: 'Account', items: [{ href: '/account', label: 'My account', icon: 'user' }] },
+  ]
+
   return (
-    <>
-      <header className="topbar">
-        <Link href="/" className="brand">
-          Finance Portal
+    <div className="shell">
+      <aside className="sidebar">
+        <Link href="/" className="side-brand">
+          <span className="logo" aria-hidden="true">
+            FP
+          </span>
+          <span>
+            <span className="brand-name">Finance Portal</span>
+            <span className="brand-sub">Payments · Funds</span>
+          </span>
         </Link>
-        <nav>
-          <Link href="/">Dashboard</Link>
-          {is('payment_requestor') && <Link href="/payment-requests/new">New request</Link>}
-          <Link href="/search">Search</Link>
-          <Link href="/notifications">
-            Notifications{count ? <span className="count">{count}</span> : null}
-          </Link>
-          {is('admin') && <Link href="/admin">Admin</Link>}
-        </nav>
-        <div className="me">
-          <RefreshButton />
-          <Link href="/account" className="muted small">
-            {me.full_name}
-          </Link>
-          <form action={signOut}>
-            <button className="link small" type="submit">
-              Sign out
-            </button>
-          </form>
+        <SideNav sections={sections} />
+      </aside>
+      <div className="main">
+        <div className="signed-in">
+          <span>
+            Signed in as <strong>{me.full_name}</strong>
+            {me.roles.length ? ` · ${me.roles.map((r) => ROLE_LABEL[r]).join(', ')}` : ''}
+          </span>
+          <span className="signed-in-actions">
+            <RefreshButton />
+            <form action={signOut}>
+              <button className="link small" type="submit">
+                Sign out
+              </button>
+            </form>
+          </span>
         </div>
-      </header>
-      <main className="page">{children}</main>
-    </>
+        <main className="page">{children}</main>
+      </div>
+    </div>
   )
 }
