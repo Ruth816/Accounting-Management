@@ -9,9 +9,12 @@ type Q = Partial<Record<'kind' | 'status' | 'from' | 'to' | 'requestor' | 'type'
 // the user may see.
 export default async function SearchPage({ searchParams }: { searchParams: Promise<Q> }) {
   const sp = await searchParams
-  const { supabase } = await getMe()
+  const { supabase, is } = await getMe()
   const { people, name } = await getDirectory()
-  const kind = sp.kind === 'fund' ? 'fund' : 'payment'
+  // A Payment Requestor searches only their own payment requests.
+  const seesFunds = is('fund_requestor') || is('fund_approver') || is('admin')
+  const seesOthers = seesFunds || is('payment_approver')
+  const kind = sp.kind === 'fund' && seesFunds ? 'fund' : 'payment'
   const like = (s: string) => `%${s.replace(/[%_,()]/g, ' ')}%`
 
   let prs: PaymentRequest[] = []
@@ -43,13 +46,15 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     <div className="stack">
       <h1>Search</h1>
       <form className="card filters" method="get">
-        <label className="field">
-          <span className="label">Look in</span>
-          <select name="kind" defaultValue={kind}>
-            <option value="payment">Payment requests</option>
-            <option value="fund">Fund requests</option>
-          </select>
-        </label>
+        {seesFunds && (
+          <label className="field">
+            <span className="label">Look in</span>
+            <select name="kind" defaultValue={kind}>
+              <option value="payment">Payment requests</option>
+              <option value="fund">Fund requests</option>
+            </select>
+          </label>
+        )}
         <label className="field">
           <span className="label">Payee, REQ No. or Ref no.</span>
           <input name="q" defaultValue={sp.q ?? ''} />
@@ -65,28 +70,32 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             ))}
           </select>
         </label>
-        <label className="field">
-          <span className="label">{kind === 'fund' ? 'Prepared by' : 'Requestor'}</span>
-          <select name="requestor" defaultValue={sp.requestor ?? ''}>
-            <option value="">Anyone</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span className="label">Request type (fund requests)</span>
-          <select name="type" defaultValue={sp.type ?? ''}>
-            <option value="">Any</option>
-            {Object.entries(REQUEST_TYPE_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
+        {seesOthers && (
+          <label className="field">
+            <span className="label">{kind === 'fund' ? 'Prepared by' : 'Requestor'}</span>
+            <select name="requestor" defaultValue={sp.requestor ?? ''}>
+              <option value="">Anyone</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {seesFunds && (
+          <label className="field">
+            <span className="label">Request type (fund requests)</span>
+            <select name="type" defaultValue={sp.type ?? ''}>
+              <option value="">Any</option>
+              {Object.entries(REQUEST_TYPE_LABEL).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field">
           <span className="label">Created from</span>
           <input type="date" name="from" defaultValue={sp.from ?? ''} />
@@ -110,7 +119,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         </div>
       </form>
       <section className="card">
-        {kind === 'payment' ? <PRTable rows={prs} name={name} empty="No matching requests." /> : <FRTable rows={frs} empty="No matching fund requests." />}
+        {kind === 'payment' ? (
+          <PRTable rows={prs} name={name} empty="No matching requests." />
+        ) : (
+          <FRTable rows={frs} empty="No matching fund requests." />
+        )}
       </section>
     </div>
   )

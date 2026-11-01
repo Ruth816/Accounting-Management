@@ -13,6 +13,7 @@ export default async function PortalLayout({ children }: { children: React.React
     .eq('recipient_id', me.id)
     .eq('read', false)
 
+  const seesFunds = is('fund_requestor') || is('fund_approver') || is('admin')
   const sections: NavSection[] = [
     {
       title: 'Requests',
@@ -20,8 +21,13 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: '/', label: 'Dashboard', icon: 'dashboard' },
         { href: '/payment-requests', label: 'Payment requests', icon: 'doc' },
         { href: '/payment-requests/approved', label: 'Payment approved', icon: 'docCheck' },
-        { href: '/fund-requests', label: 'Fund requests', icon: 'fund' },
-        { href: '/fund-requests/approved', label: 'Fund approved', icon: 'fundCheck' },
+        // Fund pages are for funding roles only; a Payment Requestor sees just their own requests.
+        ...(seesFunds
+          ? [
+              { href: '/fund-requests', label: 'Fund requests', icon: 'fund' as const },
+              { href: '/fund-requests/approved', label: 'Fund approved', icon: 'fundCheck' as const },
+            ]
+          : []),
       ],
     },
     ...(is('fund_approver') || is('payment_approver') || is('admin')

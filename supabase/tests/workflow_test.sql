@@ -292,5 +292,18 @@ insert into ids values ('dcp', create_check_payment_request());
 select delete_fund_request((select v from ids where k='dcp'), 'Doubled');
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='dcp')), 'cancelled', 'standalone fund request deleted');
 
+-- A Payment Requestor sees only what they requested (Ruth, 1 November).
+select t.as_user('req2');
+select t.eq((select count(*)::int from payment_requests where requestor_id <> t.uid('req2')), 0, 'requestor sees no one else''s payment requests');
+select t.eq((select count(*)::int from fund_requests), 0, 'requestor sees no fund requests that are not theirs');
+select t.eq((select count(*)::int from audit_log), 0, 'requestor sees no one else''s history');
+select t.eq((select count(*)::int from cheques), 0, 'requestor sees no cheques');
+select t.eq((select count(*)::int from attachments), 0, 'requestor sees no one else''s attachments');
+select t.as_user('req');
+select t.eq((select count(*)::int from payment_requests where requestor_id <> t.uid('req')), 0, 'second requestor also sees only their own');
+select t.eq((select count(*)::int from fund_requests f where not exists (
+  select 1 from payment_requests p where p.id = f.payment_request_id and p.requestor_id = t.uid('req'))), 0,
+  'only the funding of their own requests');
+
 \o
 \echo ALL TESTS PASSED
