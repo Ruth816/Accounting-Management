@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
-import { adminCreateUser, adminLookup, sendQueuedSmsNow } from '@/app/actions'
+import { adminCreateUser, adminHandOver, adminLookup, sendQueuedSmsNow } from '@/app/actions'
 import { UserRow } from '@/components/UserRow'
 import { fmtDateTime } from '@/lib/format'
 import { smsCredit } from '@/lib/sms'
@@ -75,6 +75,47 @@ export default async function AdminPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Hand over someone's work</h2>
+        <p className="muted small">
+          When someone leaves or is away, move their open work to another person: payment requests waiting for their
+          approval, fund requests assigned to them for approval or being prepared by them, and their place as anyone&apos;s
+          default approver. As Admin you can also approve or edit any request yourself.
+        </p>
+        <ActionForm action={adminHandOver} className="row" confirm="Move this person's open work to the other person?">
+          <label className="field">
+            <span className="label">From</span>
+            <select name="from" required defaultValue="">
+              <option value="" disabled>
+                Choose a person
+              </option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                  {p.active ? '' : ' (inactive)'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">To</span>
+            <select name="to" required defaultValue="">
+              <option value="" disabled>
+                Choose a person
+              </option>
+              {profiles
+                .filter((p) => p.active)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <Submit>Hand over</Submit>
+        </ActionForm>
       </section>
 
       <section className="card">

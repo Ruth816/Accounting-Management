@@ -372,5 +372,25 @@ set role authenticated;
 select withdraw_fund_request((select v from ids where k='wfr'));
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='wfr')), 'in_funding_preparation', 'fund request taken back for editing');
 
+-- Admin covers every role and can hand over someone's open work.
+select t.as_user('req');
+insert into ids values ('apr2', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Admin covers', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'approver_id', t.uid('appr'),
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 20)))));
+select t.as_user('adm');
+select save_payment_request((select v from ids where k='apr2'), jsonb_build_object(
+  'payable_to', 'Admin edited', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'approver_id', t.uid('appr'),
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 20))));
+select submit_payment_request((select v from ids where k='apr2'));
+select approve_payment_request((select v from ids where k='apr2'));
+select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='apr2')),
+            'Admin edited approved_awaiting_funding', 'Admin edits, submits and approves someone else''s request');
+insert into ids values ('afr2', receive_payment_request((select v from ids where k='apr2')));
+select t.eq((select count(*)::int from fund_requests where id = (select v from ids where k='afr2')), 1, 'Admin receives for funding');
+select t.eq((admin_hand_over(t.uid('fa'), t.uid('adm')) ->> 'fund_approvals')::int >= 0, true, 'hand over runs');
+select t.eq((select count(*)::int from profiles where default_fund_approver = t.uid('fa')), 0, 'defaults handed over');
+select t.as_user('req2');
+select t.expect_error(format('select admin_hand_over(%L, %L)', t.uid('fa'), t.uid('req2')), 'Admin role');
+
 \o
 \echo ALL TESTS PASSED

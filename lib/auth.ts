@@ -11,7 +11,8 @@ export const getMe = cache(async () => {
   if (!uid) redirect('/login')
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', uid).single<Profile>()
   if (!profile || !profile.active) redirect('/login?inactive=1')
-  const is = (r: Role) => profile.roles.includes(r)
+  // An Admin covers every role (Ruth, 1 November), so is() is true for them.
+  const is = (r: Role) => profile.roles.includes(r) || profile.roles.includes('admin')
   return { supabase, me: profile, is }
 })
 
