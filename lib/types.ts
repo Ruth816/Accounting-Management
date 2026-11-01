@@ -62,7 +62,7 @@ export interface PaymentRequest {
   work_order_no: string | null
   date_required: string | null
   payable_to: string | null
-  payment_type: 'Cash' | 'Cheque' | 'Bank deposit'
+  payment_type: 'Cash' | 'Cheque' | 'Bank deposit' | 'Direct Debit'
   billing_type: 'VAT' | 'Non-VAT' | 'Ack/R' | 'Pakyaw'
   currency: Currency
   purpose: string | null

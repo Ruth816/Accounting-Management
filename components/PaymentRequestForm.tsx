@@ -125,6 +125,7 @@ export function PaymentRequestForm({
               <option>Cash</option>
               <option>Cheque</option>
               <option value="Bank deposit">Bank deposit (over the counter)</option>
+              <option>Direct Debit</option>
             </select>
           </Field>
           <Field label="Type of billing">
