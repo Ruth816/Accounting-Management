@@ -60,12 +60,10 @@ export default async function AdminPage() {
           <table className="users-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
+                <th>Name and email</th>
                 <th>Mobile (SMS)</th>
                 <th>Roles</th>
-                <th>Default payment approver</th>
-                <th>Default fund approver</th>
+                <th>Default approvers</th>
                 <th>Active</th>
                 <th></th>
               </tr>

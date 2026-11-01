@@ -176,8 +176,11 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 
 .filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
 .users-table td { vertical-align: middle; }
-.users-table input:not([type]), .users-table select { min-width: 140px; }
-.role-list { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.users-table input:not([type]) { min-width: 120px; }
+.users-table select { min-width: 160px; }
+.users-table .field + .field { margin-top: 6px; }
+.users-table .email { margin-top: 4px; overflow-wrap: anywhere; }
+.role-list { display: grid; grid-template-columns: repeat(2, max-content); gap: 2px 12px; white-space: nowrap; }
 .roles { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .lists { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .lists .row input { flex: 1; }
