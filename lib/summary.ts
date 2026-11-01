@@ -2,6 +2,7 @@ import 'server-only'
 import { getDirectory, getMe } from './auth'
 import { frTypeLabel, prKindLabel } from './labels'
 import { money } from './calc'
+import type { Status } from './types'
 
 // Approval summaries (Ruth, 1 November): what an approver approved per day,
 // per month and over a calendar year, in Philippine time.
@@ -22,6 +23,7 @@ export type SummaryRow = {
   currency: string
   amount: number
   approver: string
+  status: Status
 }
 
 export type Totals = Record<string, number> // per currency
@@ -120,6 +122,7 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
       currency: 'PHP',
       amount: Number(f.subtotal_to_fund ?? f.amount_php ?? 0),
       approver: name(f.approved_by),
+      status: f.status,
     }))
   }
 
@@ -148,5 +151,6 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     currency: r.currency ?? 'PHP',
     amount: Number(r.total_due ?? 0),
     approver: name(r.approver_id),
+    status: r.status,
   }))
 }
