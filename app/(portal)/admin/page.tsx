@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
-import { adminCreateUser, adminHandOver, adminLookup, sendQueuedSmsNow } from '@/app/actions'
+import { adminCreateUser, adminHandOver, adminLookup, adminSetRoutes, sendQueuedSmsNow } from '@/app/actions'
+import { getRoutes } from '@/lib/routes'
 import { UserRow } from '@/components/UserRow'
 import { fmtDateTime } from '@/lib/format'
 import { smsCredit } from '@/lib/sms'
@@ -25,6 +26,8 @@ export default async function AdminPage() {
     smsCredit(),
   ])
   const profiles = (users ?? []) as Profile[]
+  const routes = await getRoutes()
+  const routeChoices = profiles.filter((p) => p.active && (p.roles.includes('payment_approver') || p.roles.includes('admin')))
   const pas = profiles.filter((p) => p.active && p.roles.includes('payment_approver'))
   const fas = profiles.filter((p) => p.active && p.roles.includes('fund_approver'))
 
@@ -75,6 +78,53 @@ export default async function AdminPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Payment approval routing</h2>
+        <p className="muted small">
+          Submitted payment requests go to these approvers automatically. VisMin goes to approver 1, then approver 2.
+          Only the approver at that step, or an Admin, can approve; an Admin&apos;s approval is final at any step.
+          Leave a region empty to let the requestor choose the approver.
+        </p>
+        <ActionForm action={adminSetRoutes} className="grid">
+          <label className="field">
+            <span className="label">NCR approver</span>
+            <select name="ncr1" defaultValue={routes.NCR[0] ?? ''}>
+              <option value="">Not set</option>
+              {routeChoices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">VisMin approver 1</span>
+            <select name="vismin1" defaultValue={routes.VisMin[0] ?? ''}>
+              <option value="">Not set</option>
+              {routeChoices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">VisMin approver 2</span>
+            <select name="vismin2" defaultValue={routes.VisMin[1] ?? ''}>
+              <option value="">Not set</option>
+              {routeChoices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="actions">
+            <Submit>Save routing</Submit>
+          </div>
+        </ActionForm>
       </section>
 
       <section className="card">

@@ -246,6 +246,23 @@ export async function adminUpdateUser(_: ActionState, fd: FormData): Promise<Act
   }
 }
 
+// Payment approval routing: NCR one step, VisMin up to two steps.
+export async function adminSetRoutes(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const supabase = await requireAdmin()
+    const { error } = await supabase.rpc('admin_set_routes', {
+      p: {
+        NCR: [str(fd, 'ncr1') ?? ''],
+        VisMin: [str(fd, 'vismin1') ?? '', str(fd, 'vismin2') ?? ''],
+      },
+    })
+    if (error) return { error: error.message }
+    return done('Approval routing saved.')
+  } catch (e) {
+    return { error: (e as Error).message }
+  }
+}
+
 // Move one person's open work to another (someone left on short notice).
 export async function adminHandOver(_: ActionState, fd: FormData): Promise<ActionState> {
   try {

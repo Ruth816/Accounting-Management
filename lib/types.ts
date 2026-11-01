@@ -49,6 +49,9 @@ export interface PaymentRequest {
   version: number
   reimbursable: boolean
   request_kind: 'regular' | 'auto_debit' | 'reimbursable'
+  approval_level: number
+  first_approver_id: string | null
+  first_approved_on: string | null
   region: 'NCR' | 'VisMin'
   project_name: string | null
   project_type: string | null
