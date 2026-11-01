@@ -103,8 +103,8 @@ export default async function Dashboard() {
           <section className="card">
             <h2>Get started</h2>
             <p>
-              Your account is Admin only, so you have no request queues yet. Queues and the New payment request button appear
-              once a user has a workflow role.
+              Your account is Admin only, so you have no request queues yet. Queues appear once a user has a
+              workflow role.
             </p>
             <ol>
               <li>
@@ -187,11 +187,6 @@ export default async function Dashboard() {
         <Queue
           id="mine"
           title="Your payment requests"
-          action={
-            <Link className="btn small" href="/payment-requests/new">
-              New payment request
-            </Link>
-          }
         >
           <PRTable rows={my} name={name} empty="You have no requests yet." />
         </Queue>
