@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { StatusBadge } from './StatusBadge'
 import { fmtDate, money } from '@/lib/format'
-import { REQUEST_TYPE_LABEL } from '@/lib/labels'
+import { frTypeLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 export function PRTable({
@@ -71,7 +71,7 @@ export function FRTable({ rows, empty = 'Nothing here.' }: { rows: FundRequest[]
               <td>
                 <Link href={`/fund-requests/${f.id}`}>{f.ref_no || 'No Ref no. yet'}</Link>
               </td>
-              <td>{REQUEST_TYPE_LABEL[f.request_type]}</td>
+              <td>{frTypeLabel(f)}</td>
               <td>{f.payee}</td>
               <td className="num">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td>{fmtDate(f.payment_date)}</td>

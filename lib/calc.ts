@@ -33,7 +33,7 @@ export function fundAmounts(original: number | null, rate: number | null, taxRat
   return { amount, beforeTax, salesTax: round2(amount - beforeTax) }
 }
 
-export const REF_NO_PATTERN = /^[1-6]- 20\d{2} (0[1-9]|1[0-2]) \d{4}$/
+export const REF_NO_PATTERN = /^[1-5]- 20\d{2} (0[1-9]|1[0-2]) \d{4}$/
 
 export function refNoProblem(ref: string, requestType: number): string | null {
   if (!ref) return 'Ref no. is required'
