@@ -515,5 +515,9 @@ select approve_fund_request((select v from ids where k='ddf'));
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='ddf')), 'approved_ready_for_qb', 'Admin approves a fund request they prepared');
 select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='ddf') and note like 'Self-approved%'), 1, 'self-approval is noted in the history');
 
+-- Payment date carries over from the payment request's Date required.
+select t.eq((select f.payment_date = p.date_required from fund_requests f join payment_requests p on p.id = f.payment_request_id
+             where f.id = (select v from ids where k='nfr')), true, 'payment date carried from date required');
+
 \o
 \echo ALL TESTS PASSED

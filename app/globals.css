@@ -259,3 +259,7 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
   .page { padding: 0; max-width: none; }
   .card { border: 0; padding: 8px 0; }
 }
+
+.carried > summary { cursor: pointer; list-style: revert; }
+.carried[open] > summary { margin-bottom: 12px; }
+.carried .card { box-shadow: none; border: 0; padding: 0; background: transparent; }

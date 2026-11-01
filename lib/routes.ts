@@ -17,7 +17,9 @@ export async function getRoutes(): Promise<Routes> {
 export async function routeHint(routes: Routes) {
   const { name } = await getDirectory()
   const part = (reg: 'NCR' | 'VisMin') =>
-    routes[reg].length ? `${reg} goes to ${routes[reg].filter(Boolean).map((id) => name(id)).join(', then ')}` : null
+    routes[reg].length
+      ? `${reg} goes to ${routes[reg].filter(Boolean).map((id) => name(id)).join(', then ')}${routes[reg][0] ? '' : ' (Approver 1 not set yet)'}`
+      : null
   const parts = [part('NCR'), part('VisMin')].filter(Boolean)
   return parts.length ? `Set by routing: ${parts.join('. ')}.` : undefined
 }
