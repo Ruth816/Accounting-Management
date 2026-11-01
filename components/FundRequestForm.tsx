@@ -30,12 +30,12 @@ export function FundRequestForm({
   const [currency, setCurrency] = useState(fr.currency)
   const [originalTyped, setOriginal] = useState(fr.original_amount === null ? '' : String(fr.original_amount))
   // Auto debit / check payment: several items, each with its own category (Ruth, 1 November).
-  type EditLine = { key: number; description: string; amount: string; category: string }
+  type EditLine = { key: number; customer: string; description: string; amount: string; category: string }
   const [lines, setLines] = useState<EditLine[]>(() =>
     (fr.lines?.length
       ? fr.lines
-      : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category }]
-    ).map((l, i) => ({ key: i, description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
+      : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category, customer: null }]
+    ).map((l, i) => ({ key: i, customer: l.customer ?? '', description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
   )
   const [nextKey, setNextKey] = useState(lines.length)
   const linesTotal = lines.reduce((t, l) => t + (parseAmount(l.amount) ?? 0), 0)
@@ -137,6 +137,7 @@ export function FundRequestForm({
               <div className="label">6. Items *</div>
               <div className="fund-line head small muted">
                 <span>No.</span>
+                <span>Customer</span>
                 <span>Description *</span>
                 <span>Amount *</span>
                 <span>Category *</span>
@@ -145,6 +146,13 @@ export function FundRequestForm({
               {lines.map((l, i) => (
                 <div className="fund-line" key={l.key}>
                   <span className="muted">{i + 1}</span>
+                  <input
+                    name="line_customer"
+                    aria-label={`Item ${i + 1} customer`}
+                    placeholder={payee || 'Same as payee'}
+                    value={l.customer}
+                    onChange={(e) => setLine(l.key, { customer: e.target.value })}
+                  />
                   <input
                     name="line_description"
                     aria-label={`Item ${i + 1} description`}
@@ -181,7 +189,7 @@ export function FundRequestForm({
                   type="button"
                   className="btn secondary small"
                   onClick={() => {
-                    setLines([...lines, { key: nextKey, description: '', amount: '', category: '' }])
+                    setLines([...lines, { key: nextKey, customer: '', description: '', amount: '', category: '' }])
                     setNextKey(nextKey + 1)
                   }}
                 >
@@ -260,9 +268,11 @@ export function FundRequestForm({
                 <SearchSelect name="category" options={accountOptions(list('category'))} defaultValue={fr.category} />
               </Field>
             )}
-            <Field label="13. Customer" hint="Always the payee">
-              <input value={payee} readOnly disabled />
-            </Field>
+            {!manual && (
+              <Field label="13. Customer" hint="Always the payee">
+                <input value={payee} readOnly disabled />
+              </Field>
+            )}
             <Field label="Assigned fund approver *">
               <select name="fund_approver_id" defaultValue={fr.fund_approver_id ?? ''}>
                 <option value="">Choose a fund approver</option>

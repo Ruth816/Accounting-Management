@@ -70,6 +70,7 @@ export function FRView({
               <thead>
                 <tr>
                   <th>No.</th>
+                  <th>Customer</th>
                   <th>Description</th>
                   <th>Category</th>
                   <th className="num">Amount ({fr.currency})</th>
@@ -79,6 +80,7 @@ export function FRView({
                 {fr.lines.map((l, i) => (
                   <tr key={i}>
                     <td>{i + 1}</td>
+                    <td>{l.customer || fr.payee}</td>
                     <td>{l.description}</td>
                     <td>{l.category}</td>
                     <td className="num">{l.amount === null ? '' : money(l.amount)}</td>

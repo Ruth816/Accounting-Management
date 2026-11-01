@@ -97,7 +97,7 @@ export interface PaymentRequest {
   updated_at: string
 }
 
-export type FundLine = { description: string; amount: number | null; category: string | null }
+export type FundLine = { description: string; amount: number | null; category: string | null; customer?: string | null }
 
 export interface FundRequest {
   id: string

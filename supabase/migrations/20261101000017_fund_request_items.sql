@@ -1,5 +1,6 @@
 -- Several items on an auto debit or check payment fund request (Ruth,
--- 1 November), each with its own description, amount and category. The
+-- 1 November), each with its own customer, description, amount and category.
+-- The payment method stays one for the whole request. The
 -- request's description, original amount and category are filled from the
 -- items: numbered descriptions, the sum, and the first item's category.
 
@@ -22,7 +23,8 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object(
            'description', coalesce(btrim(e ->> 'description'), ''),
            'amount', round(nullif(btrim(replace(e ->> 'amount', ',', '')), '')::numeric, 2),
-           'category', nullif(btrim(e ->> 'category'), '')
+           'category', nullif(btrim(e ->> 'category'), ''),
+           'customer', nullif(btrim(e ->> 'customer'), '')
          ) order by i), '[]'::jsonb)
     into v_lines
     from jsonb_array_elements(coalesce(p_lines, '[]'::jsonb)) with ordinality as t(e, i)
