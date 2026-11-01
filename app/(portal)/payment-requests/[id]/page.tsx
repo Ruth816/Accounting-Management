@@ -19,10 +19,10 @@ export default async function PaymentRequestPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; renumbered?: string }>
 }) {
   const { id } = await params
-  const { error } = await searchParams
+  const { error, renumbered } = await searchParams
   const { supabase, me, is, myRegion } = await getMe()
   const { people, name } = await getDirectory()
 
@@ -70,6 +70,11 @@ export default async function PaymentRequestPage({
   return (
     <div className="stack">
       <BackButton fallback={PR_OPEN_STATUSES.includes(pr.status) ? '/payment-requests' : '/payment-requests/approved'} />
+      {renumbered && renumbered !== pr.req_no && (
+        <div className="msg warn">
+          Another request was saved just before yours and took {renumbered}, so this request is REQ No. <strong>{pr.req_no}</strong>.
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>Payment request {pr.req_no}</h1>

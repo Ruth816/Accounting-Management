@@ -81,17 +81,24 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
   payload.items = fd.getAll('item_description').map((d, i) => ({ description: String(d), amount: amounts[i] ?? '' }))
   const { data: savedId, error } = await supabase.rpc('save_payment_request', { p_id: id, p: payload })
   if (error) return { error: error.message }
+  // New request: if someone saved first, the number shown on the form was taken.
+  let q = ''
+  const shown = str(fd, 'preview_req_no')
+  if (!id && shown) {
+    const { data: saved } = await supabase.from('payment_requests').select('req_no').eq('id', savedId).maybeSingle()
+    if (saved && saved.req_no !== shown) q = `?renumbered=${encodeURIComponent(shown)}`
+  }
   if (intent === 'submit') {
     const { error: e2 } = await supabase.rpc('submit_payment_request', { p_id: savedId })
     if (e2) {
-      if (!id) redirect(`/payment-requests/${savedId}?error=${encodeURIComponent(e2.message)}`)
+      if (!id) redirect(`/payment-requests/${savedId}${q ? q + '&' : '?'}error=${encodeURIComponent(e2.message)}`)
       revalidatePath('/', 'layout')
       return { error: e2.message }
     }
     done()
-    redirect(`/payment-requests/${savedId}`)
+    redirect(`/payment-requests/${savedId}${q}`)
   }
-  if (!id) redirect(`/payment-requests/${savedId}`)
+  if (!id) redirect(`/payment-requests/${savedId}${q}`)
   return done('Draft saved.')
 }
 
