@@ -466,5 +466,17 @@ reset role;
 update profiles set region = null where email in ('req2@x.test', 'fr@x.test');
 set role authenticated;
 
+-- Employee ID prefix sets the region: NO / NFS are NCR, VO / VFS are VisMin.
+select t.as_user('adm');
+select admin_update_user(t.uid('req2'), jsonb_build_object('roles', jsonb_build_array('payment_requestor'), 'employee_id', 'vfs0123'));
+select t.eq((select employee_id || ' ' || region from profiles where id = t.uid('req2')), 'VFS0123 VisMin', 'VFS employee is VisMin');
+select admin_update_user(t.uid('req2'), jsonb_build_object('roles', jsonb_build_array('payment_requestor'), 'employee_id', 'NFS77'));
+select t.eq((select region from profiles where id = t.uid('req2')), 'NCR', 'NFS employee is NCR');
+select admin_update_user(t.uid('req2'), jsonb_build_object('roles', jsonb_build_array('payment_requestor'), 'employee_id', 'NO5', 'region', 'VisMin'));
+select t.eq((select region from profiles where id = t.uid('req2')), 'VisMin', 'a chosen region wins over the ID');
+reset role;
+update profiles set region = null, employee_id = null where email = 'req2@x.test';
+set role authenticated;
+
 \o
 \echo ALL TESTS PASSED

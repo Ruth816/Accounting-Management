@@ -4,6 +4,7 @@ import { Message, Submit, useSubmit } from '@/components/ActionForm'
 import { adminUpdateUser } from '@/app/actions'
 import { ROLE_LABEL, ROLES } from '@/lib/labels'
 import type { Profile } from '@/lib/types'
+import { EmployeeRegion } from './EmployeeRegion'
 
 // One editable row of the Admin users table. A <form> can't wrap a <tr>, so
 // the form sits in the last cell and the inputs join it with form={formId}.
@@ -27,14 +28,7 @@ export function UserRow({ user, pas, fas }: { user: Profile; pas: Profile[]; fas
             </label>
           ))}
         </div>
-        <label className="field small">
-          <span className="label">Region (requestors see only this)</span>
-          <select form={f} name="region" defaultValue={user.region ?? ''}>
-            <option value="">Both regions</option>
-            <option value="NCR">NCR only</option>
-            <option value="VisMin">VisMin only</option>
-          </select>
-        </label>
+        <EmployeeRegion form={f} employeeId={user.employee_id ?? ''} region={user.region ?? ''} small />
       </td>
       <td>
         <label className="field small">
