@@ -392,5 +392,49 @@ select t.eq((select count(*)::int from profiles where default_fund_approver = t.
 select t.as_user('req2');
 select t.expect_error(format('select admin_hand_over(%L, %L)', t.uid('fa'), t.uid('req2')), 'Admin role');
 
+-- Approval routing: VisMin goes approver 1 then approver 2; NCR one step; Admin final.
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values
+  (gen_random_uuid(), 'jon@x.test', '{"full_name":"Jonathan Villanueva"}'),
+  (gen_random_uuid(), 'hm@x.test', '{"full_name":"Hoe Ming Wong"}');
+update profiles set roles = '{payment_approver}' where email in ('jon@x.test', 'hm@x.test');
+set role authenticated;
+select t.as_user('adm');
+select admin_set_routes(jsonb_build_object('NCR', jsonb_build_array(t.uid('hm')), 'VisMin', jsonb_build_array(t.uid('jon'), t.uid('hm'))));
+select t.as_user('req');
+insert into ids values ('rv', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'VisMin site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'VisMin',
+  'approver_id', t.uid('appr'), 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 90)))));
+select submit_payment_request((select v from ids where k='rv'));
+select t.eq((select approver_id from payment_requests where id = (select v from ids where k='rv')), t.uid('jon'), 'VisMin goes to approver 1');
+select t.as_user('hm');
+select t.expect_error(format('select approve_payment_request(%L)', (select v from ids where k='rv')), 'waiting for Jonathan');
+select t.as_user('jon');
+select approve_payment_request((select v from ids where k='rv'));
+select t.eq((select array[status::text, approver_id::text, first_approver_id::text] from payment_requests where id = (select v from ids where k='rv')),
+            array['pending_payment_approval', t.uid('hm')::text, t.uid('jon')::text], 'approver 1 passes it to approver 2');
+select t.as_user('hm');
+select approve_payment_request((select v from ids where k='rv'));
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rv')), 'approved_awaiting_funding', 'approver 2 gives final approval');
+select t.as_user('req');
+insert into ids values ('rn', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'NCR site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'VisMin',
+  'approver_id', t.uid('appr'), 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 30)))));
+select submit_payment_request((select v from ids where k='rn'));
+select t.as_user('adm');
+select approve_payment_request((select v from ids where k='rn'));
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn')), 'approved_awaiting_funding', 'Admin approval at step 1 is final');
+select t.as_user('req');
+insert into ids values ('rn2', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'NCR site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 30)))));
+select submit_payment_request((select v from ids where k='rn2'));
+select t.eq((select approver_id from payment_requests where id = (select v from ids where k='rn2')), t.uid('hm'), 'NCR goes to its one approver');
+select t.as_user('hm');
+select approve_payment_request((select v from ids where k='rn2'));
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn2')), 'approved_awaiting_funding', 'NCR approved in one step');
+select t.as_user('adm');
+select admin_set_routes('{}'::jsonb);
+
 \o
 \echo ALL TESTS PASSED

@@ -21,7 +21,9 @@ export default async function Dashboard() {
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
     is('payment_approver')
-      ? supabase.from('payment_requests').select('*').neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
+      ? (is('admin')
+          ? supabase.from('payment_requests').select('*').neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
+          : supabase.from('payment_requests').select('*').eq('approver_id', me.id).neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on'))
       : null,
     is('fund_requestor')
       ? supabase.from('payment_requests').select('*').eq('status', 'approved_awaiting_funding').order('approved_on')

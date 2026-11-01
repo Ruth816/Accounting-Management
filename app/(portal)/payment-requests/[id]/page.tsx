@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
+import { getRoutes, routeHint } from '@/lib/routes'
 import { PR_OPEN_STATUSES } from '@/lib/labels'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
@@ -55,7 +56,12 @@ export default async function PaymentRequestPage({
 
   const mine = pr.requestor_id === me.id
   const editable = (mine || is('admin')) && (pr.status === 'draft' || pr.status === 'returned_to_requestor')
-  const canApprove = is('payment_approver') && !mine && pr.status === 'pending_payment_approval'
+  const routes = await getRoutes()
+  const routed = routes[pr.region].length > 0
+  const hint = await routeHint(routes)
+  // With a route for the region, only that step's approver or an Admin decides.
+  const canApprove =
+    is('payment_approver') && !mine && pr.status === 'pending_payment_approval' && (!routed || pr.approver_id === me.id || is('admin'))
   const canReceive = is('fund_requestor') && pr.status === 'approved_awaiting_funding'
   const funded = fr && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   const canLiquidate = (mine || is('admin')) && pr.payment_type === 'Cash' && funded && !pr.liquidated_on
@@ -97,6 +103,7 @@ export default async function PaymentRequestPage({
             defaultApprover={me.default_payment_approver}
             requestorName={name(pr.requestor_id)}
             initialError={error}
+            routeHint={hint}
           />
           <section className="card">
             <h2>Attachments</h2>

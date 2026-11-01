@@ -12,12 +12,14 @@ type Row = { description: string; amount: string }
 export function PaymentRequestForm({
   pr,
   approvers,
+  routeHint,
   defaultApprover,
   requestorName,
   initialError,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
+  routeHint?: string
   defaultApprover: string | null
   requestorName: string
   initialError?: string
@@ -85,7 +87,7 @@ export function PaymentRequestForm({
           <Field label="Work order no.">
             <input name="work_order_no" defaultValue={pr?.work_order_no ?? ''} />
           </Field>
-          <Field label="Approved by *" hint={returned ? 'Locked when resubmitting' : undefined}>
+          <Field label={routeHint ? 'Approved by' : 'Approved by *'} hint={routeHint ?? (returned ? 'Locked when resubmitting' : undefined)}>
             {returned && <input type="hidden" name="approver_id" value={pr?.approver_id ?? ''} />}
             <select
               name={returned ? undefined : 'approver_id'}

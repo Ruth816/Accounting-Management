@@ -16,7 +16,10 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
     ['Job order no.', pr.job_order_no],
     ['Addendum no.', pr.addendum_no],
     ['Work order no.', pr.work_order_no],
-    ['Approved by', name(pr.approver_id)],
+    ...(pr.first_approver_id
+      ? ([['Approver 1', `${name(pr.first_approver_id)} · ${fmtDate(pr.first_approved_on)}`]] as [string, React.ReactNode][])
+      : []),
+    [pr.status === 'pending_payment_approval' ? (pr.first_approver_id ? 'Waiting for approver 2' : 'Waiting for') : 'Approved by', name(pr.approver_id)],
     ['Date required', fmtDate(pr.date_required)],
     ['Payable to', pr.payable_to],
     ['Type of payment', pr.payment_type],
