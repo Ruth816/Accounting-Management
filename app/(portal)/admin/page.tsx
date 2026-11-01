@@ -1,3 +1,4 @@
+import { EmployeeRegion } from '@/components/EmployeeRegion'
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
@@ -46,6 +47,7 @@ export default async function AdminPage() {
             <span className="label">Email</span>
             <input type="email" name="email" required />
           </label>
+          <EmployeeRegion />
           <label className="field">
             <span className="label">Temporary password</span>
             <input name="password" minLength={8} required autoComplete="off" />

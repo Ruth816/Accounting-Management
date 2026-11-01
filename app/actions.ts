@@ -1,5 +1,6 @@
 'use server'
 
+import { regionFromEmployeeId } from '@/lib/region'
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -237,6 +238,7 @@ export async function adminUpdateUser(_: ActionState, fd: FormData): Promise<Act
         default_payment_approver: str(fd, 'default_payment_approver'),
         default_fund_approver: str(fd, 'default_fund_approver'),
         region: str(fd, 'region'),
+        employee_id: str(fd, 'employee_id'),
         active: fd.get('active') === 'on',
       },
     })
@@ -287,13 +289,19 @@ export async function adminCreateUser(_: ActionState, fd: FormData): Promise<Act
     if (!email) return { error: 'Email is required.' }
     if (password.length < 8) return { error: 'The temporary password needs at least 8 characters.' }
     const admin = createAdminClient()
-    const { error } = await admin.auth.admin.createUser({
+    const { data: created, error } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name: str(fd, 'full_name') ?? email.split('@')[0] },
     })
     if (error) return { error: error.message }
+    const employeeId = str(fd, 'employee_id')?.toUpperCase() ?? null
+    const region = str(fd, 'region') ?? regionFromEmployeeId(employeeId)
+    if (created.user && (employeeId || region)) {
+      const { error: e2 } = await admin.from('profiles').update({ employee_id: employeeId, region }).eq('id', created.user.id)
+      if (e2) return { error: `Account created for ${email}, but the Employee ID and Region were not saved: ${e2.message}` }
+    }
     return done(`Account created for ${email}. Set their roles below.`)
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }

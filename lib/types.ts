@@ -25,6 +25,7 @@ export interface Profile {
   default_payment_approver: string | null
   default_fund_approver: string | null
   region: 'NCR' | 'VisMin' | null
+  employee_id: string | null
   active: boolean
 }
 
