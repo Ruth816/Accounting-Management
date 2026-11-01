@@ -12,7 +12,9 @@ export default async function Dashboard() {
   const { supabase, me, is } = await getMe()
   const { name } = await getDirectory()
 
-  const [mine, toApprove, toReceive, preparing, toFundApprove, recent] = await Promise.all([
+  const headCount = (status: string[]) =>
+    supabase.from('payment_requests').select('id', { count: 'exact', head: true }).in('status', status)
+  const [mine, toApprove, toReceive, preparing, toFundApprove, recent, coPending, coFunding, coFundApproval, coApproved] = await Promise.all([
     is('payment_requestor')
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
@@ -31,22 +33,52 @@ export default async function Dashboard() {
     is('admin')
       ? supabase.from('payment_requests').select('*').not('status', 'in', '(draft,cancelled)').order('updated_at', { ascending: false }).limit(20)
       : null,
+    is('admin') ? headCount(['pending_payment_approval']) : null,
+    is('admin') ? headCount(['approved_awaiting_funding', 'in_funding_preparation', 'returned_to_fund_requestor']) : null,
+    is('admin') ? headCount(['pending_fund_approval']) : null,
+    is('admin') ? headCount(['approved_ready_for_qb', 'approved_posted_to_qb']) : null,
   ])
   const my = (mine?.data ?? []) as PaymentRequest[]
   const count = (pred: (r: PaymentRequest) => boolean) => my.filter(pred).length
+  const frPreparing = (preparing?.data ?? []) as FundRequest[]
+
+  // Stat cards, grouped like the HRM dashboard. Only the roles the user holds add cards.
+  const action: StatCard[] = []
+  const progress: StatCard[] = []
+  const done: StatCard[] = []
+  if (is('payment_approver')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting your approval', href: '#approve-pr' })
+  if (is('fund_approver')) action.push({ value: toFundApprove?.data?.length ?? 0, label: 'fund requests awaiting your approval', href: '#approve-fr' })
+  if (is('fund_requestor')) {
+    action.push({ value: toReceive?.data?.length ?? 0, label: 'approved requests to receive for funding', href: '#receive' })
+    action.push({ value: frPreparing.filter((f) => f.status === 'returned_to_fund_requestor').length, label: 'fund requests returned to you', href: '#preparing' })
+    progress.push({ value: frPreparing.filter((f) => f.status === 'in_funding_preparation').length, label: 'fund requests in preparation', href: '#preparing' })
+  }
+  if (is('payment_requestor')) {
+    action.push({ value: count((r) => r.status === 'returned_to_requestor'), label: 'of your requests returned to you', href: '#mine' })
+    progress.push({ value: count((r) => ['pending_payment_approval', 'approved_awaiting_funding', 'in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor'].includes(r.status)), label: 'of your requests in approval', href: '#mine' })
+    progress.push({ value: count((r) => r.status === 'draft'), label: 'drafts not yet submitted', href: '#mine' })
+    done.push({ value: count((r) => r.status.startsWith('approved_ready') || r.status.startsWith('approved_posted')), label: 'of your requests fully approved', href: '#mine' })
+  }
+  const company: StatCard[] = is('admin')
+    ? [
+        { value: coPending?.count ?? 0, label: 'waiting for payment approval' },
+        { value: coFunding?.count ?? 0, label: 'approved, being funded' },
+        { value: coFundApproval?.count ?? 0, label: 'waiting for fund approval' },
+        { value: coApproved?.count ?? 0, label: 'fully approved', tone: 'good' },
+      ]
+    : []
 
   return (
     <div className="stack">
-      <h1>Hello, {me.full_name.split(' ')[0]}</h1>
+      <div>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-sub">Hello, {me.full_name.split(' ')[0]}. Here is what needs your attention.</p>
+      </div>
 
-      {is('payment_requestor') && (
-        <div className="stats">
-          <Stat label="Pending" value={count((r) => ['pending_payment_approval', 'approved_awaiting_funding', 'in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor'].includes(r.status))} />
-          <Stat label="Returned" value={count((r) => r.status === 'returned_to_requestor')} tone="warn" />
-          <Stat label="Approved" value={count((r) => r.status.startsWith('approved_ready') || r.status.startsWith('approved_posted'))} tone="good" />
-          <Stat label="Drafts" value={count((r) => r.status === 'draft')} />
-        </div>
-      )}
+      <StatGroup title="Needs action today" cards={action} tone="action" />
+      <StatGroup title="In progress" cards={progress} tone="progress" />
+      <StatGroup title="Completed" cards={done} tone="good" />
+      <StatGroup title="Company overview" cards={company} tone="progress" />
 
       {!WORKFLOW_ROLES.some(is) &&
         (is('admin') ? (
@@ -76,23 +108,24 @@ export default async function Dashboard() {
         ))}
 
       {is('payment_approver') && (
-        <Queue title="Waiting for your approval" count={toApprove?.data?.length}>
+        <Queue id="approve-pr" title="Waiting for your approval" count={toApprove?.data?.length}>
           <PRTable rows={(toApprove?.data ?? []) as PaymentRequest[]} name={name} empty="No requests waiting for you." />
         </Queue>
       )}
 
       {is('fund_approver') && (
-        <Queue title="Fund requests waiting for your approval" count={toFundApprove?.data?.length}>
+        <Queue id="approve-fr" title="Fund requests waiting for your approval" count={toFundApprove?.data?.length}>
           <FRTable rows={(toFundApprove?.data ?? []) as FundRequest[]} empty="No fund requests waiting for you." />
         </Queue>
       )}
 
       {is('fund_requestor') && (
         <>
-          <Queue title="Approved, ready to receive for funding" count={toReceive?.data?.length}>
+          <Queue id="receive" title="Approved, ready to receive for funding" count={toReceive?.data?.length}>
             <PRTable rows={(toReceive?.data ?? []) as PaymentRequest[]} name={name} empty="No approved requests waiting." />
           </Queue>
           <Queue
+            id="preparing"
             title="Fund requests you are preparing"
             count={preparing?.data?.length}
             action={
@@ -113,7 +146,7 @@ export default async function Dashboard() {
                 <strong>Check payment request:</strong> {CHECK_PAYMENT_HELP}
               </li>
             </ul>
-            <FRTable rows={(preparing?.data ?? []) as FundRequest[]} empty="Nothing in preparation." />
+            <FRTable rows={frPreparing} empty="Nothing in preparation." />
           </Queue>
         </>
       )}
@@ -126,6 +159,7 @@ export default async function Dashboard() {
 
       {is('payment_requestor') && (
         <Queue
+          id="mine"
           title="Your payment requests"
           action={
             <Link className="btn small" href="/payment-requests/new">
@@ -140,28 +174,53 @@ export default async function Dashboard() {
   )
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
+type StatCard = { value: number; label: string; href?: string; tone?: string }
+
+// A titled row of big-number cards. A non-zero number takes the group's colour.
+function StatGroup({ title, cards, tone }: { title: string; cards: StatCard[]; tone: string }) {
+  if (!cards.length) return null
   return (
-    <div className={`stat ${tone ?? ''}`}>
-      <div className="stat-value">{value}</div>
-      <div className="stat-label">{label}</div>
-    </div>
+    <section>
+      <h2 className="group-title">{title}</h2>
+      <div className="stat-grid">
+        {cards.map((c) => {
+          const cls = `stat-card${c.value ? ` ${c.tone ?? tone}` : ''}`
+          const body = (
+            <>
+              <div className="stat-value">{c.value}</div>
+              <div className="stat-label">{c.label}</div>
+            </>
+          )
+          return c.href ? (
+            <a key={c.label} href={c.href} className={cls}>
+              {body}
+            </a>
+          ) : (
+            <div key={c.label} className={cls}>
+              {body}
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
 function Queue({
+  id,
   title,
   count,
   action,
   children,
 }: {
+  id?: string
   title: string
   count?: number
   action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
-    <section className="card">
+    <section className="card" id={id}>
       <div className="card-head">
         <h2>
           {title}
