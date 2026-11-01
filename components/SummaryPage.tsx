@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PrintButton } from './PrintButton'
 import { StatusBadge } from './StatusBadge'
+import { POST_QB_FORM, PostQbForm } from './PostQbForm'
 import { fmtDate, fmtDateTime, money } from '@/lib/format'
 import {
   KIND_INFO,
@@ -51,6 +52,9 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
   // Days of the selected month that have approvals.
   const days = [...new Set(monthRows.map((r) => r.day))].sort()
   const showCheque = kind === 'funding'
+  const canPost = kind === 'funding' && access.canPost
+  const postable = (r: SummaryRow) => canPost && (r.status === 'approved_ready_for_qb' || r.status === 'sync_failed')
+  const postCount = dayRows.filter(postable).length
 
   return (
     <div className="stack summary">
@@ -133,6 +137,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
 
       <section className="card">
         <h2>Approved on {fmtDate(day)}</h2>
+        {canPost && <PostQbForm count={postCount} />}
         {dayRows.length === 0 ? (
           <p className="muted">Nothing was approved on this day.</p>
         ) : (
@@ -140,7 +145,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
             <table>
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>{canPost ? '' : '#'}</th>
                   <th>Time</th>
                   <th>{kind === 'funding' ? 'Ref no.' : 'REQ No.'}</th>
                   <th>{kind === 'funding' ? 'Payee' : 'Payable to'}</th>
@@ -157,7 +162,13 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
               <tbody>
                 {dayRows.map((r, i) => (
                   <tr key={r.id}>
-                    <td>{i + 1}</td>
+                    <td>
+                      {postable(r) ? (
+                        <input type="checkbox" form={POST_QB_FORM} name="ids" value={r.id} aria-label={`Tick ${r.ref}`} />
+                      ) : (
+                        i + 1
+                      )}
+                    </td>
                     <td>{timeManila(r.approvedAt)}</td>
                     <td>
                       <Link href={r.href}>{r.ref || 'No Ref no.'}</Link>
@@ -175,7 +186,12 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                     <td>
                       <StatusBadge status={r.status} />
                     </td>
-                    <td className="no-print">
+                    <td className="no-print row-actions">
+                      {postable(r) && (
+                        <button type="submit" form={POST_QB_FORM} name="one" value={r.id} className="btn small">
+                          Posted to QuickBooks
+                        </button>
+                      )}
                       {kind === 'funding' && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status) && (
                         <Link className="btn secondary small" href={`${r.href}/voucher`}>
                           Voucher

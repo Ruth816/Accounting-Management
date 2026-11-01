@@ -478,5 +478,13 @@ reset role;
 update profiles set region = null, employee_id = null where email = 'req2@x.test';
 set role authenticated;
 
+-- Mark posted to QuickBooks from the funding summary.
+select t.as_user('fr');
+select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'role');
+select t.as_user('adm');
+select t.eq(mark_posted_to_qb(array[(select v from ids where k='fr2')]), 1, 'marks one request posted');
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='fr2')), 'approved_posted_to_qb', 'status is posted to QuickBooks');
+select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Tick at least one');
+
 \o
 \echo ALL TESTS PASSED

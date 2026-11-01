@@ -120,6 +120,17 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
   return done('Draft saved.')
 }
 
+// Funding summary: mark one row (button "one") or the ticked rows as posted to QuickBooks.
+export async function markPostedToQb(_: ActionState, fd: FormData): Promise<ActionState> {
+  const supabase = await createClient()
+  const one = str(fd, 'one')
+  const ids = one ? [one] : fd.getAll('ids').map(String)
+  if (ids.length === 0) return { error: 'Tick at least one request.' }
+  const { data, error } = await supabase.rpc('mark_posted_to_qb', { p_ids: ids })
+  if (error) return { error: error.message }
+  return done(data === 1 ? 'Marked as posted to QuickBooks.' : `${data} requests marked as posted to QuickBooks.`)
+}
+
 // Every other button: one dispatcher keyed by "op".
 export async function requestAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const supabase = await createClient()
