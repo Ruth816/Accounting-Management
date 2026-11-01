@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP } from '@/lib/labels'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
+import { todayManila } from '@/lib/summary'
 import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
@@ -58,6 +59,18 @@ export default async function Dashboard() {
     progress.push({ value: count((r) => ['pending_payment_approval', 'approved_awaiting_funding', 'in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor'].includes(r.status)), label: 'of your requests in approval', href: '#mine' })
     progress.push({ value: count((r) => r.status === 'draft'), label: 'drafts not yet submitted', href: '#mine' })
     done.push({ value: count((r) => r.status.startsWith('approved_ready') || r.status.startsWith('approved_posted')), label: 'of your requests fully approved', href: '#mine' })
+  }
+  // Today's approvals, linking to the approval summaries.
+  const todayStart = `${todayManila()}T00:00:00+08:00`
+  if (is('fund_approver')) {
+    const { count: n } = await supabase.from('fund_requests').select('id', { count: 'exact', head: true })
+      .eq('approved_by', me.id).gte('approved_on', todayStart).neq('status', 'cancelled')
+    done.push({ value: n ?? 0, label: 'fund requests you approved today · open the summary list for funding', href: '/summary/funding' })
+  }
+  if (is('payment_approver')) {
+    const { count: n } = await supabase.from('payment_requests').select('id', { count: 'exact', head: true })
+      .eq('approver_id', me.id).gte('approved_on', todayStart).neq('status', 'cancelled')
+    done.push({ value: n ?? 0, label: 'payment requests you approved today · open the summary', href: '/summary/payments' })
   }
   const company: StatCard[] = is('admin')
     ? [

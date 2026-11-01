@@ -14,6 +14,7 @@ const ICONS = {
   fund: 'M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
   fundCheck: 'M3 7h18v10H3zM9 12l2 2 4-4',
   plus: 'M12 5v14M5 12h14M4 4h16v16H4z',
+  summary: 'M4 20V10M10 20V4M16 20v-7M2 20h20',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   bell: 'M6 16V11a6 6 0 1 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0',
   admin: 'M12 3l8 4v5c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V7zM9 12l2 2 4-4',

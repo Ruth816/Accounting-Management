@@ -24,6 +24,21 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: '/fund-requests/approved', label: 'Fund approved', icon: 'fundCheck' },
       ],
     },
+    ...(is('fund_approver') || is('payment_approver') || is('admin')
+      ? [
+          {
+            title: 'Summaries',
+            items: [
+              ...(is('fund_approver') || is('admin')
+                ? [{ href: '/summary/funding', label: 'Summary list for funding', icon: 'summary' as const }]
+                : []),
+              ...(is('payment_approver') || is('admin')
+                ? [{ href: '/summary/payments', label: 'Approved payments summary', icon: 'summary' as const }]
+                : []),
+            ],
+          },
+        ]
+      : []),
     {
       title: 'Tools',
       items: [
