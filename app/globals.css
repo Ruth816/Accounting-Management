@@ -263,3 +263,14 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .carried > summary { cursor: pointer; list-style: revert; }
 .carried[open] > summary { margin-bottom: 12px; }
 .carried .card { box-shadow: none; border: 0; padding: 0; background: transparent; }
+
+.search-select { position: relative; }
+.search-select > input:not([type=hidden]) { width: 100%; }
+.search-options {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); max-height: 280px; overflow-y: auto;
+  margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.search-options li { padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.search-options li.active { background: rgba(79, 70, 229, 0.25); }
+.search-options li[aria-selected=true] { font-weight: 600; }

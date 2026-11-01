@@ -1,5 +1,6 @@
 'use client'
 
+import { SearchSelect, type SearchOption } from './SearchSelect'
 import { useState } from 'react'
 import { saveFundRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
@@ -177,16 +178,10 @@ export function FundRequestForm({
           <h2>Accounts</h2>
           <div className="grid">
             <Field label="11. Payment account *">
-              <select name="payment_account" defaultValue={fr.payment_account ?? ''}>
-                <option value="">Choose</option>
-                <AccountOptions items={list('payment_account')} />
-              </select>
+              <SearchSelect name="payment_account" options={accountOptions(list('payment_account'))} defaultValue={fr.payment_account} />
             </Field>
             <Field label="12. Category *">
-              <select name="category" defaultValue={fr.category ?? ''}>
-                <option value="">Choose</option>
-                <AccountOptions items={list('category')} />
-              </select>
+              <SearchSelect name="category" options={accountOptions(list('category'))} defaultValue={fr.category} />
             </Field>
             <Field label="13. Customer" hint="Always the payee">
               <input value={payee} readOnly disabled />
@@ -292,37 +287,11 @@ export function FundRequestForm({
 
 // QuickBooks-style account list: grouped by account type, sub-accounts ("Parent:Child")
 // indented under their parent. The option value stays the full QuickBooks name.
-function AccountOptions({ items }: { items: Lookup[] }) {
-  const groups = new Map<string, Lookup[]>()
-  for (const i of items) {
-    const g = i.qb_type ?? 'Other'
-    groups.set(g, [...(groups.get(g) ?? []), i])
-  }
-  return (
-    <>
-      {[...groups].map(([type, rows]) => (
-        <optgroup key={type} label={type}>
-          {rows.flatMap((r, i) => {
-            const parts = r.label.split(':')
-            const parent = parts.slice(0, -1).join(':')
-            const out = []
-            // A locked parent (e.g. AMORTIZATION EXPENSES) is not in the list: show it as a heading only.
-            if (parent && !rows.some((x) => x.label === parent) && !rows.slice(0, i).some((x) => x.label.startsWith(parent + ':'))) {
-              out.push(
-                <option key={`h-${parent}`} disabled>
-                  {parent}
-                </option>,
-              )
-            }
-            out.push(
-              <option key={r.id} value={r.label}>
-                {'\u00a0\u00a0\u00a0\u00a0'.repeat(parts.length - 1) + parts[parts.length - 1]}
-              </option>,
-            )
-            return out
-          })}
-        </optgroup>
-      ))}
-    </>
-  )
+// "Parent:Child" QuickBooks names shown as "Child (Parent)" so typing either finds it.
+function accountOptions(items: Lookup[]): SearchOption[] {
+  return items.map((r) => {
+    const parts = r.label.split(':')
+    const leaf = parts[parts.length - 1]
+    return { value: r.label, label: parts.length > 1 ? `${leaf} (${parts.slice(0, -1).join(' › ')})` : leaf, group: r.qb_type }
+  })
 }
