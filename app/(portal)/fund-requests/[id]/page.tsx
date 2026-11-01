@@ -48,9 +48,8 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
     }
     formData = { lookups: (lookups ?? []) as Lookup[], cheques }
   }
-  const prRequestor = (pr as { requestor_id?: string } | null)?.requestor_id
   const approvers = people.filter(
-    (p) => p.active && p.roles.includes('fund_approver') && p.id !== me.id && p.id !== prRequestor,
+    (p) => p.active && (p.roles.includes('fund_approver') || p.roles.includes('admin')),
   )
 
   return (

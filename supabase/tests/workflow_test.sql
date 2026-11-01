@@ -503,5 +503,17 @@ select approve_payment_request((select v from ids where k='dd'));
 insert into ids values ('ddf', receive_payment_request((select v from ids where k='dd')));
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ddf')), 'Direct Debit', 'Direct Debit payment type gives a Direct Debit fund request');
 
+-- Fund requests: an Admin may prepare and approve their own (Ruth, 1 November).
+select t.as_user('adm');
+select save_fund_request((select v from ids where k='ddf'), jsonb_build_object(
+  'ref_no', '2- 2026 11 0901', 'payment_date', '2026-11-01', 'payment_method', 'Direct Debit',
+  'tax_code', '12% S - Services', 'payment_account', 'BDO Current Account', 'category', 'Rent',
+  'fund_approver_id', t.uid('adm')));
+select submit_fund_request((select v from ids where k='ddf'));
+select set_fund_reviewed((select v from ids where k='ddf'), true);
+select approve_fund_request((select v from ids where k='ddf'));
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='ddf')), 'approved_ready_for_qb', 'Admin approves a fund request they prepared');
+select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='ddf') and note like 'Self-approved%'), 1, 'self-approval is noted in the history');
+
 \o
 \echo ALL TESTS PASSED
