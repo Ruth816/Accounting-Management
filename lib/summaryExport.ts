@@ -1,4 +1,5 @@
 import 'server-only'
+import { STATUS_LABEL } from './labels'
 import { KIND_INFO, MONTHS, fmtTotals, loadYear, sumRows, summaryAccess, timeManila, validDay, type SummaryKind } from './summary'
 
 const cell = (v: string | number) => {
@@ -33,14 +34,14 @@ export async function exportSummary(kind: SummaryKind, req: Request) {
     line([
       'Date', 'Time', kind === 'funding' ? 'Ref no.' : 'REQ No.', 'Payee', 'Type',
       kind === 'funding' ? 'Payment method' : 'Payment type', info.accountLabel,
-      ...(kind === 'funding' ? ['Cheque no.'] : []), 'Approved by', ...amountCols,
+      ...(kind === 'funding' ? ['Cheque no.'] : []), 'Approved by', ...amountCols, 'Status',
     ]),
   )
   for (const r of rows) {
     out.push(
       line([
         r.day, timeManila(r.approvedAt), r.ref, r.payee, r.type, r.method, r.account,
-        ...(kind === 'funding' ? [r.cheque] : []), r.approver, r.currency, r.amount.toFixed(2),
+        ...(kind === 'funding' ? [r.cheque] : []), r.approver, r.currency, r.amount.toFixed(2), STATUS_LABEL[r.status],
       ]),
     )
   }

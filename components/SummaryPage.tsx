@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PrintButton } from './PrintButton'
+import { StatusBadge } from './StatusBadge'
 import { fmtDate, fmtDateTime, money } from '@/lib/format'
 import {
   KIND_INFO,
@@ -149,6 +150,8 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                   {showCheque && <th>Cheque no.</th>}
                   {access.approver === 'all' && <th>Approved by</th>}
                   <th className="num">{info.amountLabel}</th>
+                  <th>Status</th>
+                  <th className="no-print"></th>
                 </tr>
               </thead>
               <tbody>
@@ -169,6 +172,16 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                       {r.currency === 'PHP' && kind === 'funding' ? '' : r.currency + ' '}
                       {money(r.amount)}
                     </td>
+                    <td>
+                      <StatusBadge status={r.status} />
+                    </td>
+                    <td className="no-print">
+                      {kind === 'funding' && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status) && (
+                        <Link className="btn secondary small" href={`${r.href}/voucher`}>
+                          Voucher
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -181,6 +194,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                       </td>
                       {access.approver === 'all' && <td />}
                       <td className="num">{fmtTotals(sumRows(rs))}</td>
+                      <td colSpan={2} />
                     </tr>
                   ))}
                 <tr className="total-row">
@@ -189,6 +203,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                   </td>
                   {access.approver === 'all' && <td />}
                   <td className="num">{fmtTotals(sumRows(dayRows))}</td>
+                  <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>
