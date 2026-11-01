@@ -519,5 +519,25 @@ select t.eq((select count(*)::int from audit_log where fund_request_id = (select
 select t.eq((select f.payment_date = p.date_required from fund_requests f join payment_requests p on p.id = f.payment_request_id
              where f.id = (select v from ids where k='nfr')), true, 'payment date carried from date required');
 
+-- Auto debit with several items, each with its own category.
+select t.as_user('adm');
+insert into ids values ('mi', create_auto_debit_request());
+select save_fund_request((select v from ids where k='mi'), jsonb_build_object(
+  'ref_no', '1- 2026 11 0902', 'payee', 'Globe', 'payment_date', '2026-11-01', 'payment_method', 'Direct Debit',
+  'tax_code', '12% S - Services', 'payment_account', 'BDO Current Account', 'fund_approver_id', t.uid('adm')));
+select save_fund_lines((select v from ids where k='mi'), jsonb_build_array(
+  jsonb_build_object('description', 'Internet', 'amount', '1,000', 'category', 'Rent'),
+  jsonb_build_object('description', 'Phone', 'amount', '250.50', 'category', null),
+  jsonb_build_object('description', '', 'amount', '', 'category', '')));
+select t.eq((select original_amount::text || '|' || description || '|' || category || '|' || jsonb_array_length(lines)
+             from fund_requests where id = (select v from ids where k='mi')),
+            E'1250.50|1. Internet\n2. Phone|Rent|2', 'items set amount, description and category');
+select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='mi')), 'Every item needs');
+select save_fund_lines((select v from ids where k='mi'), jsonb_build_array(
+  jsonb_build_object('description', 'Internet', 'amount', '1000', 'category', 'Rent'),
+  jsonb_build_object('description', 'Phone', 'amount', '250.50', 'category', 'Rent')));
+select submit_fund_request((select v from ids where k='mi'));
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='mi')), 'pending_fund_approval', 'complete items can be sent');
+
 \o
 \echo ALL TESTS PASSED

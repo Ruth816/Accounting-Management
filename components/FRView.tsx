@@ -37,7 +37,7 @@ export function FRView({
     ['9. Total before tax', fr.total_before_tax === null ? null : money(fr.total_before_tax)],
     ['10. Sales tax', fr.sales_tax === null ? null : money(fr.sales_tax)],
     ['11. Payment account', fr.payment_account],
-    ['12. Category', fr.category],
+    ['12. Category', (fr.lines?.length ?? 0) > 1 ? 'Per item, see Items' : fr.category],
     ['13. Customer', fr.payee],
     ['14. Memo', fr.memo],
   )
@@ -62,8 +62,38 @@ export function FRView({
           </div>
         ))}
       </dl>
-      <h3>6. Description</h3>
-      <p className="pre">{fr.description}</p>
+      {fr.lines?.length ? (
+        <>
+          <h3>6. Items</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th className="num">Amount ({fr.currency})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fr.lines.map((l, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td>{l.description}</td>
+                    <td>{l.category}</td>
+                    <td className="num">{l.amount === null ? '' : money(l.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <>
+          <h3>6. Description</h3>
+          <p className="pre">{fr.description}</p>
+        </>
+      )}
       {fr.wtax_note && <p className="note small">{fr.wtax_note}</p>}
     </section>
   )

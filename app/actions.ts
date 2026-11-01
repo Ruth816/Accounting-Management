@@ -114,8 +114,21 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
   const payload: Record<string, unknown> = Object.fromEntries(fields.map((k) => [k, str(fd, k)]))
   // An unedited memo is sent empty so the database keeps pre-filling it.
   payload.memo = fd.get('memo_edited') === 'true' ? str(fd, 'memo') : null
+  // Auto debit / check payment: several items, each with its own category.
+  const hasLines = fd.has('line_description')
+  const lineAmounts = fd.getAll('line_amount').map(String)
+  const lineCategories = fd.getAll('line_category').map(String)
+  const lines = fd.getAll('line_description').map((d, i) => ({
+    description: String(d),
+    amount: lineAmounts[i] ?? '',
+    category: lineCategories[i] ?? '',
+  }))
   const { error } = await supabase.rpc('save_fund_request', { p_id: id, p: payload })
   if (error) return { error: error.message }
+  if (hasLines) {
+    const { error: e3 } = await supabase.rpc('save_fund_lines', { p_id: id, p_lines: lines })
+    if (e3) return { error: e3.message }
+  }
   if (intent === 'submit') {
     const { error: e2 } = await supabase.rpc('submit_fund_request', { p_id: id })
     if (e2) {

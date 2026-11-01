@@ -274,3 +274,10 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .search-options li { padding: 6px 10px; border-radius: 6px; cursor: pointer; }
 .search-options li.active { background: rgba(79, 70, 229, 0.25); }
 .search-options li[aria-selected=true] { font-weight: 600; }
+
+.fund-lines { display: grid; gap: 8px; margin-top: 12px; }
+.fund-line { display: grid; grid-template-columns: 28px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 720px) {
+  .fund-line { grid-template-columns: 24px 1fr; }
+  .fund-line.head { display: none; }
+}

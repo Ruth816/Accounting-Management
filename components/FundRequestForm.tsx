@@ -28,7 +28,19 @@ export function FundRequestForm({
 
   const [method, setMethod] = useState(fr.payment_method ?? '')
   const [currency, setCurrency] = useState(fr.currency)
-  const [original, setOriginal] = useState(fr.original_amount === null ? '' : String(fr.original_amount))
+  const [originalTyped, setOriginal] = useState(fr.original_amount === null ? '' : String(fr.original_amount))
+  // Auto debit / check payment: several items, each with its own category (Ruth, 1 November).
+  type EditLine = { key: number; description: string; amount: string; category: string }
+  const [lines, setLines] = useState<EditLine[]>(() =>
+    (fr.lines?.length
+      ? fr.lines
+      : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category }]
+    ).map((l, i) => ({ key: i, description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
+  )
+  const [nextKey, setNextKey] = useState(lines.length)
+  const linesTotal = lines.reduce((t, l) => t + (parseAmount(l.amount) ?? 0), 0)
+  const original = manual ? (lines.some((l) => l.amount.trim()) ? linesTotal.toFixed(2) : '') : originalTyped
+  const setLine = (key: number, patch: Partial<EditLine>) => setLines(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   const [rate, setRate] = useState(fr.exchange_rate === null || fr.currency === 'PHP' ? '' : String(fr.exchange_rate))
   const [tax, setTax] = useState(fr.tax_code ?? '')
   const [payee, setPayee] = useState(fr.payee ?? '')
@@ -120,9 +132,71 @@ export function FundRequestForm({
               </>
             )}
           </div>
-          <Field label="6. Description *">
-            <textarea name="description" rows={4} defaultValue={fr.description ?? ''} readOnly={!manual} />
-          </Field>
+          {manual ? (
+            <div className="fund-lines">
+              <div className="label">6. Items *</div>
+              <div className="fund-line head small muted">
+                <span>No.</span>
+                <span>Description *</span>
+                <span>Amount *</span>
+                <span>Category *</span>
+                <span />
+              </div>
+              {lines.map((l, i) => (
+                <div className="fund-line" key={l.key}>
+                  <span className="muted">{i + 1}</span>
+                  <input
+                    name="line_description"
+                    aria-label={`Item ${i + 1} description`}
+                    value={l.description}
+                    onChange={(e) => setLine(l.key, { description: e.target.value })}
+                  />
+                  <input
+                    name="line_amount"
+                    aria-label={`Item ${i + 1} amount`}
+                    inputMode="decimal"
+                    className="num"
+                    value={l.amount}
+                    onChange={(e) => setLine(l.key, { amount: e.target.value })}
+                  />
+                  <SearchSelect
+                    name="line_category"
+                    options={accountOptions(list('category'))}
+                    defaultValue={l.category}
+                    onChange={(v) => setLine(l.key, { category: v })}
+                  />
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => setLines(lines.filter((x) => x.key !== l.key))}
+                    disabled={lines.length === 1}
+                    aria-label={`Remove item ${i + 1}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  onClick={() => {
+                    setLines([...lines, { key: nextKey, description: '', amount: '', category: '' }])
+                    setNextKey(nextKey + 1)
+                  }}
+                >
+                  + Add item
+                </button>
+                <span className="muted small">
+                  Total of {lines.length} item{lines.length === 1 ? '' : 's'}: {currency} {money(linesTotal)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <Field label="6. Description *">
+              <textarea name="description" rows={4} defaultValue={fr.description ?? ''} readOnly />
+            </Field>
+          )}
         </section>
 
         <section className="card">
@@ -141,7 +215,8 @@ export function FundRequestForm({
                 className="num"
                 value={original}
                 onChange={(e) => setOriginal(e.target.value)}
-                readOnly={!manual}
+                readOnly
+                title={manual ? 'The total of the items' : undefined}
               />
             </Field>
             {currency === 'USD' && (
@@ -180,9 +255,11 @@ export function FundRequestForm({
             <Field label="11. Payment account *">
               <SearchSelect name="payment_account" options={accountOptions(list('payment_account'))} defaultValue={fr.payment_account} />
             </Field>
-            <Field label="12. Category *">
-              <SearchSelect name="category" options={accountOptions(list('category'))} defaultValue={fr.category} />
-            </Field>
+            {!manual && (
+              <Field label="12. Category *">
+                <SearchSelect name="category" options={accountOptions(list('category'))} defaultValue={fr.category} />
+              </Field>
+            )}
             <Field label="13. Customer" hint="Always the payee">
               <input value={payee} readOnly disabled />
             </Field>

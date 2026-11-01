@@ -97,6 +97,8 @@ export interface PaymentRequest {
   updated_at: string
 }
 
+export type FundLine = { description: string; amount: number | null; category: string | null }
+
 export interface FundRequest {
   id: string
   request_type: 1 | 2 | 3 | 4 | 5
@@ -125,6 +127,7 @@ export interface FundRequest {
   sales_tax: number | null
   payment_account: string | null
   category: string | null
+  lines: FundLine[]
   memo: string | null
   memo_edited: boolean
   wtax_note: string | null
