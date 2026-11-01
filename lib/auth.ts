@@ -17,7 +17,7 @@ export const getMe = cache(async () => {
   // Approvers and Admins always see every region.
   const limited = !profile.roles.some((r) => r === 'admin' || r === 'payment_approver' || r === 'fund_approver')
   const myRegion = limited ? (profile.region ?? null) : null
-  return { supabase, me: profile, is, myRegion }
+  return { supabase, me: profile, is, myRegion, limited }
 })
 
 export const getDirectory = cache(async () => {
