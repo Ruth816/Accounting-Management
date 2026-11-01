@@ -23,7 +23,7 @@ export default async function PaymentRequestPage({
 }) {
   const { id } = await params
   const { error } = await searchParams
-  const { supabase, me, is } = await getMe()
+  const { supabase, me, is, myRegion } = await getMe()
   const { people, name } = await getDirectory()
 
   const { data } = await supabase.from('payment_requests').select('*').eq('id', id).maybeSingle()
@@ -104,6 +104,7 @@ export default async function PaymentRequestPage({
             requestorName={name(pr.requestor_id)}
             initialError={error}
             routeHint={hint}
+            lockedRegion={pr.requestor_id === me.id ? myRegion : null}
           />
           <section className="card">
             <h2>Attachments</h2>

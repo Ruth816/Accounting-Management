@@ -16,6 +16,7 @@ export function PaymentRequestForm({
   defaultApprover,
   requestorName,
   initialError,
+  lockedRegion,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
@@ -23,6 +24,7 @@ export function PaymentRequestForm({
   defaultApprover: string | null
   requestorName: string
   initialError?: string
+  lockedRegion?: 'NCR' | 'VisMin' | null
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(
     savePaymentRequest,
@@ -66,11 +68,18 @@ export function PaymentRequestForm({
               ))}
             </select>
           </Field>
-          <Field label="Region">
-            <select name="region" defaultValue={pr?.region ?? 'NCR'}>
-              <option>NCR</option>
-              <option>VisMin</option>
-            </select>
+          <Field label="Region" hint={lockedRegion ? `You file ${lockedRegion} requests only` : undefined}>
+            {lockedRegion ? (
+              <>
+                <input type="hidden" name="region" value={lockedRegion} />
+                <input value={lockedRegion} readOnly aria-readonly />
+              </>
+            ) : (
+              <select name="region" defaultValue={pr?.region ?? 'NCR'}>
+                <option>NCR</option>
+                <option>VisMin</option>
+              </select>
+            )}
           </Field>
           <Field label="Project name" hint="Site name and address">
             <input name="project_name" defaultValue={pr?.project_name ?? ''} />
