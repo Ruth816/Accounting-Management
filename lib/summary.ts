@@ -1,6 +1,6 @@
 import 'server-only'
 import { getDirectory, getMe } from './auth'
-import { frTypeLabel } from './labels'
+import { frTypeLabel, prKindLabel } from './labels'
 import { money } from './calc'
 
 // Approval summaries (Ruth, 1 November): what an approver approved per day,
@@ -141,7 +141,7 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     day: manilaDay(r.approved_on),
     ref: r.req_no,
     payee: r.payable_to ?? '',
-    type: r.reimbursable ? 'Reimbursable' : 'Not reimbursable',
+    type: prKindLabel(r),
     method: r.payment_type ?? '',
     account: name(r.requestor_id),
     cheque: '',

@@ -1,5 +1,5 @@
 import { fmtDate, money } from '@/lib/format'
-import { poModeLabel } from '@/lib/labels'
+import { poModeLabel, prKindLabel } from '@/lib/labels'
 import type { PaymentRequest } from '@/lib/types'
 
 // Read-only payment request, laid out like the paper form.
@@ -7,7 +7,7 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
   const rows: [string, React.ReactNode][] = [
     ['Payment REQ No.', pr.req_no],
     ['Version', pr.version],
-    ['Reimbursable?', pr.reimbursable ? 'Yes' : 'No'],
+    ['Request type', prKindLabel(pr)],
     ['Region', pr.region],
     ['Date', fmtDate(pr.created_at)],
     ['Requested by', name(pr.requestor_id)],

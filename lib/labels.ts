@@ -96,6 +96,15 @@ export const PR_APPROVED_STATUSES = [
   'sync_failed',
 ]
 // Statuses a payment request can still be deleted in (before funding starts).
+// Payment request "Request type" (Ruth, 1 November).
+export const PR_KIND_LABEL: Record<string, string> = {
+  regular: 'Regular fund request (check payment & cash)',
+  auto_debit: 'Auto debit (direct debit & MC)',
+  reimbursable: 'Reimbursable fund request',
+}
+export const prKindLabel = (r: { request_kind?: string | null; reimbursable: boolean }) =>
+  PR_KIND_LABEL[r.request_kind ?? (r.reimbursable ? 'reimbursable' : 'regular')]
+
 export const PR_DELETABLE: string[] = [
   'draft',
   'pending_payment_approval',

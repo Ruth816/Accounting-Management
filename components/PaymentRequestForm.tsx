@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { savePaymentRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
 import { itemNo, money, paymentAmounts } from '@/lib/calc'
-import { TERMS } from '@/lib/labels'
+import { PR_KIND_LABEL, TERMS } from '@/lib/labels'
 import type { PaymentRequest, Person } from '@/lib/types'
 
 type Row = { description: string; amount: string }
@@ -55,10 +55,13 @@ export function PaymentRequestForm({
           <Field label="Requested by">
             <input value={requestorName} readOnly disabled />
           </Field>
-          <Field label="Reimbursable?">
-            <select name="reimbursable" defaultValue={pr?.reimbursable ? 'true' : 'false'}>
-              <option value="false">No</option>
-              <option value="true">Yes</option>
+          <Field label="Request type">
+            <select name="request_kind" defaultValue={pr?.request_kind ?? (pr?.reimbursable ? 'reimbursable' : 'regular')}>
+              {Object.entries(PR_KIND_LABEL).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Region">
