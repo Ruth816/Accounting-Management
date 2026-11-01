@@ -219,6 +219,18 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 .sig-line { border-bottom: 1px solid var(--text); min-height: 28px; padding-bottom: 2px; font-weight: 600; }
 .voucher-head h2 { font-size: 1.2rem; margin: 0; }
 
+/* NCR / VisMin tabs and type groups */
+.region-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.region-tab { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); text-decoration: none; font-weight: 600; }
+.region-tab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.tab-count { display: inline-block; min-width: 1.6em; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 0.8em; text-align: center; font-weight: 600; }
+.region-title { font-size: 1.35rem; margin-bottom: 8px; }
+.req-group { padding: 12px 0; border-top: 1px solid var(--border); }
+.req-group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.req-group h3 { font-size: 1rem; margin: 0 0 8px; }
+.req-group-total { font-weight: 700; font-variant-numeric: tabular-nums; }
+.card .card.region-card, .queue .region-card { padding: 12px 0; border: 0; background: none; }
+
 /* Approval summaries */
 .summary .stat-card .stat-value { font-size: 1.35rem; overflow-wrap: anywhere; }
 .summary-controls { align-items: flex-end; gap: 12px; }
