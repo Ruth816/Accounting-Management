@@ -492,5 +492,16 @@ create temp table peek as select peek_next_req_no() as n;
 insert into ids values ('pk', save_payment_request(null, '{"payable_to": "Peek"}'::jsonb));
 select t.eq((select req_no from payment_requests where id = (select v from ids where k='pk')), (select n from peek), 'next REQ No. preview matches the saved number');
 
+-- Direct Debit as a Type of payment carries to the fund request.
+select t.as_user('req');
+insert into ids values ('dd', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'DD payee', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
+  'payment_type', 'Direct Debit', 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 50)))));
+select submit_payment_request((select v from ids where k='dd'));
+select t.as_user('adm');
+select approve_payment_request((select v from ids where k='dd'));
+insert into ids values ('ddf', receive_payment_request((select v from ids where k='dd')));
+select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ddf')), 'Direct Debit', 'Direct Debit payment type gives a Direct Debit fund request');
+
 \o
 \echo ALL TESTS PASSED
