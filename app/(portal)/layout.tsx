@@ -1,3 +1,4 @@
+import { COMPANY, LogoMark } from '@/components/Logo'
 import Link from 'next/link'
 import { getMe } from '@/lib/auth'
 import { signOut } from '@/app/actions'
@@ -63,11 +64,11 @@ export default async function PortalLayout({ children }: { children: React.React
       <aside className="sidebar">
         <Link href="/" className="side-brand">
           <span className="logo" aria-hidden="true">
-            FP
+            <LogoMark size={34} />
           </span>
           <span>
-            <span className="brand-name">Finance Portal</span>
-            <span className="brand-sub">Payments · Funds</span>
+            <span className="brand-name">{COMPANY}</span>
+            <span className="brand-sub">Finance Portal</span>
           </span>
         </Link>
         <SideNav sections={sections} />
