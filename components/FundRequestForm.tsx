@@ -108,12 +108,12 @@ export function FundRequestForm({
                 <input name="cash_received_by" defaultValue={fr.cash_received_by ?? ''} />
               </Field>
             )}
-            {(method === 'Bank transfer' || method === 'Auto debit') && (
+            {(method === 'FUND TRANSFER' || method === 'Direct Debit') && (
               <>
-                <Field label={`Bank account name${method === 'Bank transfer' ? ' *' : ''}`}>
+                <Field label={`Bank account name${method === 'FUND TRANSFER' ? ' *' : ''}`}>
                   <input name="bank_account_name" defaultValue={fr.bank_account_name ?? ''} />
                 </Field>
-                <Field label={`Bank account number${method === 'Bank transfer' ? ' *' : ''}`}>
+                <Field label={`Bank account number${method === 'FUND TRANSFER' ? ' *' : ''}`}>
                   <input name="bank_account_no" defaultValue={fr.bank_account_no ?? ''} />
                 </Field>
               </>
@@ -179,17 +179,13 @@ export function FundRequestForm({
             <Field label="11. Payment account *">
               <select name="payment_account" defaultValue={fr.payment_account ?? ''}>
                 <option value="">Choose</option>
-                {list('payment_account').map((a) => (
-                  <option key={a.id}>{a.label}</option>
-                ))}
+                <AccountOptions items={list('payment_account')} />
               </select>
             </Field>
             <Field label="12. Category *">
               <select name="category" defaultValue={fr.category ?? ''}>
                 <option value="">Choose</option>
-                {list('category').map((c) => (
-                  <option key={c.id}>{c.label}</option>
-                ))}
+                <AccountOptions items={list('category')} />
               </select>
             </Field>
             <Field label="13. Customer" hint="Always the payee">
@@ -291,5 +287,42 @@ export function FundRequestForm({
         </div>
       </PendingProvider>
     </form>
+  )
+}
+
+// QuickBooks-style account list: grouped by account type, sub-accounts ("Parent:Child")
+// indented under their parent. The option value stays the full QuickBooks name.
+function AccountOptions({ items }: { items: Lookup[] }) {
+  const groups = new Map<string, Lookup[]>()
+  for (const i of items) {
+    const g = i.qb_type ?? 'Other'
+    groups.set(g, [...(groups.get(g) ?? []), i])
+  }
+  return (
+    <>
+      {[...groups].map(([type, rows]) => (
+        <optgroup key={type} label={type}>
+          {rows.flatMap((r, i) => {
+            const parts = r.label.split(':')
+            const parent = parts.slice(0, -1).join(':')
+            const out = []
+            // A locked parent (e.g. AMORTIZATION EXPENSES) is not in the list: show it as a heading only.
+            if (parent && !rows.some((x) => x.label === parent) && !rows.slice(0, i).some((x) => x.label.startsWith(parent + ':'))) {
+              out.push(
+                <option key={`h-${parent}`} disabled>
+                  {parent}
+                </option>,
+              )
+            }
+            out.push(
+              <option key={r.id} value={r.label}>
+                {'\u00a0\u00a0\u00a0\u00a0'.repeat(parts.length - 1) + parts[parts.length - 1]}
+              </option>,
+            )
+            return out
+          })}
+        </optgroup>
+      ))}
+    </>
   )
 }

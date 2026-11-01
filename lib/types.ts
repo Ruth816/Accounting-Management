@@ -107,7 +107,7 @@ export interface FundRequest {
   exchange_rate: number | null
   rate_date: string | null
   payment_date: string | null
-  payment_method: 'Check' | 'Auto debit' | 'Bank transfer' | 'Cash' | null
+  payment_method: 'Cash' | 'Check' | 'Credit Card' | 'Direct Debit' | 'FUND TRANSFER' | null
   cash_received_by: string | null
   bank_account_name: string | null
   bank_account_no: string | null
@@ -141,6 +141,7 @@ export interface Lookup {
   list: 'payment_method' | 'payment_account' | 'category' | 'tax_code'
   label: string
   rate: number | null
+  qb_type: string | null // QuickBooks account type, e.g. Expense
   sort: number
   active: boolean
 }

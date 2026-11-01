@@ -123,12 +123,12 @@ select t.as_user('fr');
 -- A second fund request (auto debit) on the same cheque.
 insert into ids values ('ad', create_auto_debit_request());
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='ad'),
-  '{"payment_method":"Auto debit","cheque_mode":"new","cheque_no":"100200"}'), 'already exists');
+  '{"payment_method":"Check","cheque_mode":"new","cheque_no":"100200"}'), 'already exists');
 select save_fund_request((select v from ids where k='ad'), jsonb_build_object(
   'ref_no', '1- 2026 10 0001', 'payee', 'PLDT', 'item_no', '1', 'description', 'Internet', 'currency', 'USD',
   'original_amount', '420', 'exchange_rate', '58.25', 'rate_date', '2026-10-20',
-  'payment_date', '2026-10-21', 'payment_method', 'Auto debit', 'bank_account_name', 'Co', 'bank_account_no', '123',
-  'tax_code', '12% S - Services', 'payment_account', 'BDO Current Account', 'category', 'Telephone and Internet',
+  'payment_date', '2026-10-21', 'payment_method', 'Check', 'bank_account_name', 'Co', 'bank_account_no', '123',
+  'tax_code', '12% S - Services', 'payment_account', 'Cash and cash equivalents', 'category', 'OFFICE EXPENSES- Admin:Utilities (light, water & Internet)',
   'fund_approver_id', t.uid('fa'), 'cheque_mode', 'existing',
   'cheque_id', (select id from cheques where cheque_no = '100200'), 'subtotal_to_fund', '24465'));
 select t.eq((select amount_php from fund_requests where id = (select v from ids where k='ad')), 24465.00, 'USD 420 at 58.25 gives PHP 24,465.00');
@@ -146,9 +146,9 @@ select t.eq((select memo_edited from fund_requests where id = (select v from ids
 select submit_fund_request((select v from ids where k='fr'));
 select t.eq((select status::text from payment_requests where id = (select v from ids where k='pr')), 'pending_fund_approval', 'payment request follows fund status');
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='ad'),
-  jsonb_build_object('ref_no', '2- 2026 10 0075', 'payment_method', 'Auto debit', 'payee', 'PLDT', 'description', 'x', 'original_amount', 1)), 'already used');
+  jsonb_build_object('ref_no', '2- 2026 10 0075', 'payment_method', 'Direct Debit', 'payee', 'PLDT', 'description', 'x', 'original_amount', 1)), 'already used');
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='ad'),
-  jsonb_build_object('ref_no', '2- 2026 10 0099', 'payment_method', 'Auto debit', 'payee', 'PLDT', 'description', 'x', 'original_amount', 1)) || '; select submit_fund_request(' || quote_literal((select v from ids where k='ad')) || ')', 'must start with 1-');
+  jsonb_build_object('ref_no', '2- 2026 10 0099', 'payment_method', 'Direct Debit', 'payee', 'PLDT', 'description', 'x', 'original_amount', 1)) || '; select submit_fund_request(' || quote_literal((select v from ids where k='ad')) || ')', 'must start with 1-');
 
 -- 5,500 at 12%
 select t.eq((select round(5500.00 / 1.12, 2)), 4910.71, '5,500 at 12% gives 4,910.71');
@@ -253,6 +253,12 @@ reset role;
 update fund_requests set ref_no = '1- 2026 10 0999' where id = (select v from ids where k='cp');
 set role authenticated;
 select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='cp')), 'must start with 2-');
+
+-- QuickBooks lists (spec 10): real payment methods, expense categories only.
+select t.eq((select string_agg(label, ', ' order by sort) from lookups where list = 'payment_method'), 'Cash, Check, Credit Card, Direct Debit, FUND TRANSFER', 'payment methods match QuickBooks');
+select t.eq((select count(*)::int from lookups where list = 'category' and label = 'BANK CHARGES:Transfer & MC Fees'), 1, 'Transfer & MC Fees is a category');
+select t.eq((select count(*)::int from lookups where list = 'category' and label in ('Loan Payable', 'AMORTIZATION EXPENSES', 'Utilities')), 0, 'no samples, no locked parents');
+select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ad')), 'Check', 'auto debit can still be paid by Check');
 
 \o
 \echo ALL TESTS PASSED

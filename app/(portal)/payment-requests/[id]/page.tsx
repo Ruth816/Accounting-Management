@@ -168,7 +168,7 @@ export default async function PaymentRequestPage({
                 </div>
               </>
             )}
-            {(fr.payment_method === 'Bank transfer' || fr.payment_method === 'Auto debit') && (
+            {(fr.payment_method === 'FUND TRANSFER' || fr.payment_method === 'Direct Debit') && (
               <>
                 <div>
                   <dt>Account name</dt>
