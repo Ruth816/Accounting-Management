@@ -30,7 +30,9 @@ export default async function Dashboard() {
       ? supabase.from('fund_requests').select('*').in('status', ['in_funding_preparation', 'returned_to_fund_requestor']).order('updated_at', { ascending: false })
       : null,
     is('fund_approver')
-      ? supabase.from('fund_requests').select('*').eq('fund_approver_id', me.id).eq('status', 'pending_fund_approval').order('submitted_on')
+      ? (is('admin')
+          ? supabase.from('fund_requests').select('*').eq('status', 'pending_fund_approval').order('submitted_on')
+          : supabase.from('fund_requests').select('*').eq('fund_approver_id', me.id).eq('status', 'pending_fund_approval').order('submitted_on'))
       : null,
     is('admin')
       ? supabase.from('payment_requests').select('*').not('status', 'in', '(draft,cancelled)').order('updated_at', { ascending: false }).limit(20)

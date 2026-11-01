@@ -246,6 +246,21 @@ export async function adminUpdateUser(_: ActionState, fd: FormData): Promise<Act
   }
 }
 
+// Move one person's open work to another (someone left on short notice).
+export async function adminHandOver(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const supabase = await requireAdmin()
+    const { data, error } = await supabase.rpc('admin_hand_over', { p_from: str(fd, 'from'), p_to: str(fd, 'to') })
+    if (error) return { error: error.message }
+    const n = data as { payment_approvals: number; fund_approvals: number; fund_requests: number }
+    return done(
+      `Handed over: ${n.payment_approvals} payment requests to approve, ${n.fund_approvals} fund requests to approve, ${n.fund_requests} fund requests in preparation. Default approvers were updated too.`,
+    )
+  } catch (e) {
+    return { error: (e as Error).message }
+  }
+}
+
 export async function adminCreateUser(_: ActionState, fd: FormData): Promise<ActionState> {
   try {
     await requireAdmin()

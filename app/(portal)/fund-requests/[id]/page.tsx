@@ -33,7 +33,7 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
 
   const editable =
     is('fund_requestor') && !fr.locked && (fr.status === 'in_funding_preparation' || fr.status === 'returned_to_fund_requestor')
-  const isApprover = is('fund_approver') && fr.fund_approver_id === me.id && fr.status === 'pending_fund_approval'
+  const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
   const approved = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
 
   let formData: { lookups: Lookup[]; cheques: ChequeOption[] } | null = null
