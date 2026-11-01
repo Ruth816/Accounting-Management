@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { StatusBadge } from './StatusBadge'
+import { DeleteButton } from './DeleteButton'
 import { fmtDate, money } from '@/lib/format'
 import { frTypeLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
@@ -8,10 +9,12 @@ export function PRTable({
   rows,
   name,
   empty = 'Nothing here.',
+  canDelete,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
   empty?: string
+  canDelete?: (r: PaymentRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -25,6 +28,7 @@ export function PRTable({
             <th className="num">Amount due</th>
             <th>Required</th>
             <th>Status</th>
+            {canDelete && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -42,6 +46,9 @@ export function PRTable({
               <td>
                 <StatusBadge status={r.status} />
               </td>
+              {canDelete && (
+                <td>{canDelete(r) && <DeleteButton op="delete_pr" id={r.id} label={`payment request ${r.req_no}`} />}</td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -50,7 +57,15 @@ export function PRTable({
   )
 }
 
-export function FRTable({ rows, empty = 'Nothing here.' }: { rows: FundRequest[]; empty?: string }) {
+export function FRTable({
+  rows,
+  empty = 'Nothing here.',
+  canDelete,
+}: {
+  rows: FundRequest[]
+  empty?: string
+  canDelete?: (f: FundRequest) => boolean
+}) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
     <div className="table-wrap">
@@ -63,6 +78,7 @@ export function FRTable({ rows, empty = 'Nothing here.' }: { rows: FundRequest[]
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
             <th>Status</th>
+            {canDelete && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -78,6 +94,13 @@ export function FRTable({ rows, empty = 'Nothing here.' }: { rows: FundRequest[]
               <td>
                 <StatusBadge status={f.status} />
               </td>
+              {canDelete && (
+                <td>
+                  {canDelete(f) && (
+                    <DeleteButton op="delete_fr" id={f.id} label={`fund request ${f.ref_no || '(no Ref no. yet)'}`} />
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

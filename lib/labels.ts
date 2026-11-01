@@ -95,5 +95,13 @@ export const PR_APPROVED_STATUSES = [
   'approved_posted_to_qb',
   'sync_failed',
 ]
+// Statuses a payment request can still be deleted in (before funding starts).
+export const PR_DELETABLE: string[] = [
+  'draft',
+  'pending_payment_approval',
+  'returned_to_requestor',
+  'expired',
+  'approved_awaiting_funding',
+]
 export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
 export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']

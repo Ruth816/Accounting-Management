@@ -260,5 +260,37 @@ select t.eq((select count(*)::int from lookups where list = 'category' and label
 select t.eq((select count(*)::int from lookups where list = 'category' and label in ('Loan Payable', 'AMORTIZATION EXPENSES', 'Utilities')), 0, 'no samples, no locked parents');
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ad')), 'Check', 'auto debit can still be paid by Check');
 
+-- Delete button: soft delete to Cancelled, kept in the audit log.
+select t.as_user('req');
+insert into ids values ('dpr', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Dup', 'purpose', 'Doubled entry', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 50)))));
+select submit_payment_request((select v from ids where k='dpr'));
+select t.as_user('req2');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Only the requestor or an Admin');
+select t.as_user('appr');
+select approve_payment_request((select v from ids where k='dpr'));
+select t.as_user('fr');
+insert into ids values ('dfr', receive_payment_request((select v from ids where k='dpr')));
+select t.as_user('req');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Delete its fund request first');
+select t.as_user('fa');
+select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='dfr'), 'x'), 'Fund Requestor or an Admin');
+select t.as_user('fr');
+select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='dfr'), ' '), 'reason is required');
+select t.expect_error(format('select delete_fund_request(%L, %L)', (select id from fund_requests where locked limit 1), 'x'), 'approved fund request cannot');
+select delete_fund_request((select v from ids where k='dfr'), 'Encoded wrongly');
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='dfr')), 'cancelled', 'deleted fund request is Cancelled');
+select t.eq((select status::text || ' ' || coalesce(fund_request_id::text, 'none') from payment_requests where id = (select v from ids where k='dpr')),
+            'approved_awaiting_funding none', 'its payment request waits for funding again');
+select t.as_user('adm');
+select delete_payment_request((select v from ids where k='dpr'), 'Doubled');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='dpr')), 'cancelled', 'Admin deletes a payment request');
+select t.eq((select count(*)::int from audit_log where action = 'Deleted' and note in ('Doubled', 'Encoded wrongly')), 2, 'deletes stay in the audit log');
+select t.as_user('fr');
+insert into ids values ('dcp', create_check_payment_request());
+select delete_fund_request((select v from ids where k='dcp'), 'Doubled');
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='dcp')), 'cancelled', 'standalone fund request deleted');
+
 \o
 \echo ALL TESTS PASSED
