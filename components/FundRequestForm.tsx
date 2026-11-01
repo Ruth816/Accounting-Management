@@ -5,7 +5,7 @@ import { saveFundRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
 import { Field } from './PaymentRequestForm'
 import { chequeMemo, fundAmounts, money, parseAmount, refNoProblem } from '@/lib/calc'
-import { REQUEST_TYPE_LABEL } from '@/lib/labels'
+import { REQUEST_TYPE_HELP, REQUEST_TYPE_LABEL } from '@/lib/labels'
 import type { FundRequest, Lookup, Person } from '@/lib/types'
 
 export type ChequeOption = { id: string; cheque_no: string; total: number }
@@ -41,7 +41,8 @@ export function FundRequestForm({
 
   const taxRate = fr.tax_locked ? fr.tax_rate : list('tax_code').find((t) => t.label === tax)?.rate ?? null
   const amounts = fundAmounts(parseAmount(original), currency === 'PHP' ? 1 : parseAmount(rate), taxRate === null ? null : Number(taxRate))
-  const usesCheque = method === 'Check' || method === 'Auto debit'
+  // Auto debit issues no cheque (Ruth, 1 November); cheques belong to Check.
+  const usesCheque = method === 'Check'
   const sub = parseAmount(subtotal) ?? 0
   const chosen = cheques.find((c) => c.id === chequeId)
   // The listed total includes this request's saved subtotal when it is already on that cheque.
@@ -63,7 +64,7 @@ export function FundRequestForm({
         <section className="card">
           <h2>Expense details</h2>
           <div className="grid">
-            <Field label="Request type">
+            <Field label="Request type" hint={REQUEST_TYPE_HELP[fr.request_type]}>
               <input value={`${fr.request_type} · ${REQUEST_TYPE_LABEL[fr.request_type]}`} readOnly disabled />
             </Field>
             <Field label="1. Type">
@@ -209,13 +210,8 @@ export function FundRequestForm({
 
         {usesCheque && (
           <section className="card">
-            <h2>Cheque{method === 'Auto debit' ? ' (optional)' : ''}</h2>
+            <h2>Cheque</h2>
             <div className="segmented" role="radiogroup">
-              {method === 'Auto debit' && (
-                <label>
-                  <input type="radio" name="cheque_mode" value="none" checked={mode === 'none'} onChange={() => setMode('none')} /> No cheque
-                </label>
-              )}
               <label>
                 <input type="radio" name="cheque_mode" value="existing" checked={mode === 'existing'} onChange={() => setMode('existing')} />{' '}
                 Select existing cheque

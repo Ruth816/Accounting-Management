@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { REQUEST_TYPE_HELP } from '@/lib/labels'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
 import { ActionForm, Submit } from '@/components/ActionForm'
@@ -104,6 +105,14 @@ export default async function Dashboard() {
               </ActionForm>
             }
           >
+            <ul className="small muted plain type-help">
+              <li>
+                <strong>Auto debit request:</strong> {REQUEST_TYPE_HELP[1]}
+              </li>
+              <li>
+                <strong>Check payment request:</strong> {REQUEST_TYPE_HELP[6]}
+              </li>
+            </ul>
             <FRTable rows={(preparing?.data ?? []) as FundRequest[]} empty="Nothing in preparation." />
           </Queue>
         </>

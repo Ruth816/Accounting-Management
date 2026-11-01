@@ -40,6 +40,12 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
+// What each self-started fund request type is for (Ruth, 1 November).
+export const REQUEST_TYPE_HELP: Record<number, string> = {
+  1: "Paid straight from the disbursement account with no cheque issued: manager's check (MC), auto deduct, or direct payment to an account.",
+  6: 'Paid by cheque: the funds are withdrawn, or someone is paid, using a cheque.',
+}
+
 export const REQUEST_TYPE_LABEL: Record<number, string> = {
   1: 'Auto debit request',
   2: 'NCR fund request',
