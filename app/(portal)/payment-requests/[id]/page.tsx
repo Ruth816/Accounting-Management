@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { BackButton } from '@/components/BackButton'
+import { PR_OPEN_STATUSES } from '@/lib/labels'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { PaymentRequestForm } from '@/components/PaymentRequestForm'
@@ -61,6 +63,7 @@ export default async function PaymentRequestPage({
 
   return (
     <div className="stack">
+      <BackButton fallback={PR_OPEN_STATUSES.includes(pr.status) ? '/payment-requests' : '/payment-requests/approved'} />
       <div className="page-head">
         <div>
           <h1>Payment request {pr.req_no}</h1>

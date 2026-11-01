@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { BackButton } from '@/components/BackButton'
+import { FR_OPEN_STATUSES } from '@/lib/labels'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
@@ -53,6 +55,15 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
 
   return (
     <div className="stack">
+      <BackButton
+        fallback={
+          !(is('fund_requestor') || is('fund_approver') || is('admin'))
+            ? '/'
+            : FR_OPEN_STATUSES.includes(fr.status)
+              ? '/fund-requests'
+              : '/fund-requests/approved'
+        }
+      />
       <div className="page-head">
         <div>
           <h1>Fund request {fr.ref_no ?? ''}</h1>
