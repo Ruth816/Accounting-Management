@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from './Tables'
 import { FR_OPEN_STATUSES, PR_DELETABLE } from '@/lib/labels'
@@ -35,6 +36,7 @@ export async function PaymentRequestList({ title, sub, statuses }: { title: stri
 
 export async function FundRequestList({ title, sub, statuses }: { title: string; sub: string; statuses: string[] }) {
   const { supabase, is } = await getMe()
+  if (!(is('fund_requestor') || is('fund_approver') || is('admin'))) notFound()
   const mayDelete = is('fund_requestor') || is('admin')
   const { data } = await supabase
     .from('fund_requests')
