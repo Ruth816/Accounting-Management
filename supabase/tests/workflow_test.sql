@@ -348,5 +348,29 @@ select t.eq((select array[request_type::text, payment_method, region] from fund_
 select t.eq((select array[request_type::text, region] from fund_requests where id = (select v from ids where k='fkrb')),
             array['4', 'NCR'], 'reimbursable NCR gives fund type 4');
 
+-- Edit: take a waiting request back for editing.
+select t.as_user('req');
+insert into ids values ('wpr', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Edit me', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 10)))));
+select submit_payment_request((select v from ids where k='wpr'));
+select t.as_user('req2');
+select t.expect_error(format('select withdraw_payment_request(%L)', (select v from ids where k='wpr')), 'Payment Requestor role|not found');
+select t.as_user('req');
+select withdraw_payment_request((select v from ids where k='wpr'));
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='wpr')), 'draft', 'taken back to draft for editing');
+select save_payment_request((select v from ids where k='wpr'), jsonb_build_object(
+  'payable_to', 'Edited', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'approver_id', t.uid('appr'),
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 12))));
+select submit_payment_request((select v from ids where k='wpr'));
+select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='wpr')), 'Edited pending_payment_approval', 'edited and resubmitted');
+select t.as_user('fr');
+insert into ids values ('wfr', create_check_payment_request());
+reset role;
+update fund_requests set status = 'pending_fund_approval' where id = (select v from ids where k='wfr');
+set role authenticated;
+select withdraw_fund_request((select v from ids where k='wfr'));
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='wfr')), 'in_funding_preparation', 'fund request taken back for editing');
+
 \o
 \echo ALL TESTS PASSED

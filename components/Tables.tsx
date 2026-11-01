@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { StatusBadge } from './StatusBadge'
 import { DeleteButton } from './DeleteButton'
+import { EditButton } from './EditButton'
 import { fmtDate, money } from '@/lib/format'
 import { frRegionOf, frTypeLabel, prKindLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
@@ -10,11 +11,13 @@ export function PRTable({
   name,
   empty = 'Nothing here.',
   canDelete,
+  canEdit,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
   empty?: string
   canDelete?: (r: PaymentRequest) => boolean
+  canEdit?: (r: PaymentRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -30,7 +33,7 @@ export function PRTable({
             <th className="num">Amount due</th>
             <th>Required</th>
             <th>Status</th>
-            {canDelete && <th aria-label="Actions" />}
+            {(canDelete || canEdit) && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -50,8 +53,18 @@ export function PRTable({
               <td>
                 <StatusBadge status={r.status} />
               </td>
-              {canDelete && (
-                <td>{canDelete(r) && <DeleteButton op="delete_pr" id={r.id} label={`payment request ${r.req_no}`} />}</td>
+              {(canDelete || canEdit) && (
+                <td>
+                  <span className="row-actions">
+                    {canEdit?.(r) && (
+                      <EditButton
+                        href={`/payment-requests/${r.id}`}
+                        withdrawOp={r.status === 'pending_payment_approval' ? 'withdraw_pr' : undefined}
+                      />
+                    )}
+                    {canDelete?.(r) && <DeleteButton op="delete_pr" id={r.id} label={`payment request ${r.req_no}`} />}
+                  </span>
+                </td>
               )}
             </tr>
           ))}
@@ -65,10 +78,12 @@ export function FRTable({
   rows,
   empty = 'Nothing here.',
   canDelete,
+  canEdit,
 }: {
   rows: FundRequest[]
   empty?: string
   canDelete?: (f: FundRequest) => boolean
+  canEdit?: (f: FundRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -83,7 +98,7 @@ export function FRTable({
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
             <th>Status</th>
-            {canDelete && <th aria-label="Actions" />}
+            {(canDelete || canEdit) && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -100,11 +115,19 @@ export function FRTable({
               <td>
                 <StatusBadge status={f.status} />
               </td>
-              {canDelete && (
+              {(canDelete || canEdit) && (
                 <td>
-                  {canDelete(f) && (
-                    <DeleteButton op="delete_fr" id={f.id} label={`fund request ${f.ref_no || '(no Ref no. yet)'}`} />
-                  )}
+                  <span className="row-actions">
+                    {canEdit?.(f) && (
+                      <EditButton
+                        href={`/fund-requests/${f.id}`}
+                        withdrawOp={f.status === 'pending_fund_approval' ? 'withdraw_fr' : undefined}
+                      />
+                    )}
+                    {canDelete?.(f) && (
+                      <DeleteButton op="delete_fr" id={f.id} label={`fund request ${f.ref_no || '(no Ref no. yet)'}`} />
+                    )}
+                  </span>
                 </td>
               )}
             </tr>

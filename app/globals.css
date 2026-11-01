@@ -222,6 +222,7 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 .update-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin: 12px 24px 0; padding: 10px 14px; border-radius: 10px; background: rgba(79, 70, 229, 0.18); border: 1px solid var(--accent); font-weight: 600; }
 
+.row-actions { display: inline-flex; gap: 6px; }
 .back-btn { align-self: flex-start; }
 
 /* NCR / VisMin tabs and type groups */

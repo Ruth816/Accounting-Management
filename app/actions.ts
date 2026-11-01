@@ -135,6 +135,12 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
       case 'cancel_pr':
         await call('cancel_payment_request', { p_id: id })
         return done('Request cancelled.')
+      case 'withdraw_pr':
+        await call('withdraw_payment_request', { p_id: id })
+        return done('Taken back for editing.')
+      case 'withdraw_fr':
+        await call('withdraw_fund_request', { p_id: id })
+        return done('Taken back for editing.')
       case 'delete_pr':
         await call('delete_payment_request', { p_id: id, p_reason: reason })
         return done('Request deleted.')
