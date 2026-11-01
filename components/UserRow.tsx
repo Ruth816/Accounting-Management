@@ -14,8 +14,8 @@ export function UserRow({ user, pas, fas }: { user: Profile; pas: Profile[]; fas
     <tr>
       <td>
         <input form={f} name="full_name" defaultValue={user.full_name} aria-label="Name" />
+        <div className="small muted email">{user.email}</div>
       </td>
-      <td className="small">{user.email}</td>
       <td>
         <input form={f} name="mobile_no" defaultValue={user.mobile_no ?? ''} placeholder="09171234567" aria-label="Mobile (SMS)" />
       </td>
@@ -29,24 +29,28 @@ export function UserRow({ user, pas, fas }: { user: Profile; pas: Profile[]; fas
         </div>
       </td>
       <td>
-        <select form={f} name="default_payment_approver" defaultValue={user.default_payment_approver ?? ''} aria-label="Default payment approver">
-          <option value="">None</option>
-          {pas.filter((p) => p.id !== user.id).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.full_name}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td>
-        <select form={f} name="default_fund_approver" defaultValue={user.default_fund_approver ?? ''} aria-label="Default fund approver">
-          <option value="">None</option>
-          {fas.filter((p) => p.id !== user.id).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.full_name}
-            </option>
-          ))}
-        </select>
+        <label className="field small">
+          <span className="label">Payment approver</span>
+          <select form={f} name="default_payment_approver" defaultValue={user.default_payment_approver ?? ''}>
+            <option value="">None</option>
+            {pas.filter((p) => p.id !== user.id).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field small">
+          <span className="label">Fund approver</span>
+          <select form={f} name="default_fund_approver" defaultValue={user.default_fund_approver ?? ''}>
+            <option value="">None</option>
+            {fas.filter((p) => p.id !== user.id).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+              </option>
+            ))}
+          </select>
+        </label>
       </td>
       <td>
         <input form={f} type="checkbox" name="active" defaultChecked={user.active} aria-label="Active" />
