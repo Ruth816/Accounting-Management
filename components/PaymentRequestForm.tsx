@@ -18,6 +18,8 @@ export function PaymentRequestForm({
   initialError,
   lockedRegion,
   nextReqNo,
+  routes,
+  requestorId,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
@@ -27,6 +29,8 @@ export function PaymentRequestForm({
   initialError?: string
   lockedRegion?: 'NCR' | 'VisMin' | null
   nextReqNo?: string | null
+  routes?: { NCR: string[]; VisMin: string[] }
+  requestorId?: string
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(
     savePaymentRequest,
@@ -41,6 +45,12 @@ export function PaymentRequestForm({
   const [billing, setBilling] = useState<string>(pr?.billing_type ?? 'VAT')
   const [wtax, setWtax] = useState<number>(Number(pr?.wtax_rate ?? 0))
   const [currency, setCurrency] = useState<string>(pr?.currency ?? 'PHP')
+  const [region, setRegion] = useState<'NCR' | 'VisMin'>(lockedRegion ?? pr?.region ?? 'NCR')
+  // With routing for the region, the first approver is set by the route
+  // (skipping a step whose approver is the requestor).
+  const route = routes?.[region] ?? []
+  const routedApprover = route[0] && route[0] !== requestorId ? route[0] : route[1] && route[1] !== requestorId ? route[1] : null
+  const approverName = (id: string) => approvers.find((a) => a.id === id)?.full_name ?? 'the routed approver'
   const totals = paymentAmounts(rows, billing, wtax)
   const returned = pr?.status === 'returned_to_requestor'
   const filled = rows.filter((r) => r.description.trim() || r.amount.trim()).length
@@ -78,7 +88,7 @@ export function PaymentRequestForm({
                 <input value={lockedRegion} readOnly aria-readonly />
               </>
             ) : (
-              <select name="region" defaultValue={pr?.region ?? 'NCR'}>
+              <select name="region" value={region} onChange={(e) => setRegion(e.target.value as 'NCR' | 'VisMin')}>
                 <option>NCR</option>
                 <option>VisMin</option>
               </select>
@@ -99,8 +109,14 @@ export function PaymentRequestForm({
           <Field label="Work order no.">
             <input name="work_order_no" defaultValue={pr?.work_order_no ?? ''} />
           </Field>
-          <Field label={routeHint ? 'Approved by' : 'Approved by *'} hint={routeHint ?? (returned ? 'Locked when resubmitting' : undefined)}>
+          <Field label="Approved by *" hint={routedApprover && !returned ? `Set by ${region} routing` : routeHint ?? (returned ? 'Locked when resubmitting' : undefined)}>
             {returned && <input type="hidden" name="approver_id" value={pr?.approver_id ?? ''} />}
+            {routedApprover && !returned ? (
+              <>
+                <input type="hidden" name="approver_id" value={routedApprover} />
+                <input value={approverName(routedApprover)} readOnly aria-readonly />
+              </>
+            ) : (
             <select
               name={returned ? undefined : 'approver_id'}
               defaultValue={pr ? pr.approver_id ?? '' : defaultApprover ?? ''}
@@ -113,6 +129,7 @@ export function PaymentRequestForm({
                 </option>
               ))}
             </select>
+            )}
           </Field>
           <Field label="Date required *">
             <input type="date" name="date_required" defaultValue={pr?.date_required ?? ''} />
@@ -153,8 +170,8 @@ export function PaymentRequestForm({
         <div className="items">
           <div className="items-head small muted">
             <span>No.</span>
-            <span>Description</span>
-            <span>Amount ({currency})</span>
+            <span>Description *</span>
+            <span>Amount ({currency}) *</span>
             <span />
           </div>
           {rows.map((r, i) => (
@@ -279,7 +296,7 @@ export function PaymentRequestForm({
         </ol>
         <label className="check">
           <input type="checkbox" name="terms_accepted" defaultChecked={pr?.terms_accepted ?? false} />I have read and
-          understood the terms and conditions
+          understood the terms and conditions *
         </label>
       </section>
 

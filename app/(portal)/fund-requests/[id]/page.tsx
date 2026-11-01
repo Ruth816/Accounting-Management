@@ -5,12 +5,13 @@ import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
 import { FRView } from '@/components/FRView'
+import { PRView } from '@/components/PRView'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Tracker } from '@/components/Tracker'
 import { Attachments } from '@/components/Attachments'
 import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
-import type { Attachment, AuditEntry, FundRequest, Lookup } from '@/lib/types'
+import type { Attachment, AuditEntry, FundRequest, Lookup, PaymentRequest } from '@/lib/types'
 
 export default async function FundRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,7 +24,7 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
 
   const [{ data: pr }, { data: files }, { data: audit }, { data: cheque }, { data: chequeTotal }] = await Promise.all([
     fr.payment_request_id
-      ? supabase.from('payment_requests').select('id, req_no, requestor_id').eq('id', fr.payment_request_id).maybeSingle()
+      ? supabase.from('payment_requests').select('*').eq('id', fr.payment_request_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from('attachments').select('*').eq('fund_request_id', id).order('created_at'),
     supabase.from('audit_log').select('*').eq('fund_request_id', id).order('created_at'),
@@ -86,6 +87,18 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
         <div className="msg warn">
           <strong>Returned by {name(fr.fund_approver_id)}:</strong> {fr.disapproval_reason}
         </div>
+      )}
+
+      {pr && (
+        <details className="card carried" open={editable}>
+          <summary>
+            <strong>From payment request {(pr as PaymentRequest).req_no}</strong>{' '}
+            <span className="muted small">Everything encoded on the payment request, carried over</span>
+          </summary>
+          <div className="stack">
+            <PRView pr={pr as PaymentRequest} name={(id) => name(id)} />
+          </div>
+        </details>
       )}
 
       {editable && formData ? (

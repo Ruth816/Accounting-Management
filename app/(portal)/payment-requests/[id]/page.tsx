@@ -110,6 +110,8 @@ export default async function PaymentRequestPage({
             initialError={error}
             routeHint={hint}
             lockedRegion={pr.requestor_id === me.id ? myRegion : null}
+            routes={routes}
+            requestorId={pr.requestor_id}
           />
           <section className="card">
             <h2>Attachments</h2>
