@@ -30,12 +30,22 @@ export function FundRequestForm({
   const [currency, setCurrency] = useState(fr.currency)
   const [originalTyped, setOriginal] = useState(fr.original_amount === null ? '' : String(fr.original_amount))
   // Auto debit / check payment: several items, each with its own category (Ruth, 1 November).
-  type EditLine = { key: number; customer: string; description: string; amount: string; tax: string; category: string }
+  type EditLine = { key: number; customer: string; description: string; amount: string; tax: string; category: string; chequeNo: string; chequeAmount: string }
   const [lines, setLines] = useState<EditLine[]>(() =>
     (fr.lines?.length
       ? fr.lines
       : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category, customer: null, tax_code: fr.tax_code }]
-    ).map((l, i) => ({ key: i, customer: l.customer ?? '', tax: l.tax_code ?? '', description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
+    ).map((l, i) => ({
+      key: i,
+      customer: l.customer ?? '',
+      tax: l.tax_code ?? '',
+      description: l.description ?? '',
+      amount: l.amount === null ? '' : String(l.amount),
+      category: l.category ?? '',
+      chequeNo: l.cheque_no ?? '',
+      // Left empty while it equals the item amount, so it follows the amount.
+      chequeAmount: l.cheque_amount == null || l.cheque_amount === l.amount ? '' : String(l.cheque_amount),
+    })),
   )
   const [nextKey, setNextKey] = useState(lines.length)
   const linesTotal = lines.reduce((t, l) => t + (parseAmount(l.amount) ?? 0), 0)
@@ -65,12 +75,30 @@ export function FundRequestForm({
   })()
   // Auto debit issues no cheque (Ruth, 1 November); cheques belong to Check.
   const usesCheque = method === 'Check'
+  // Check with items: a cheque number and amount on every item (Ruth, 2 November),
+  // and the cheque section becomes a summary of the cheques issued.
+  const itemCheques = manual && usesCheque
+  const chequeAmountOf = (l: EditLine) => parseAmount(l.chequeAmount) ?? parseAmount(l.amount) ?? 0
+  const issued = (() => {
+    const by = new Map<string, { no: string; items: number[]; total: number }>()
+    lines.forEach((l, i) => {
+      const no = l.chequeNo.trim()
+      if (!itemCheques || !no) return
+      const c = by.get(no) ?? { no, items: [], total: 0 }
+      c.items.push(i + 1)
+      c.total += chequeAmountOf(l)
+      by.set(no, c)
+    })
+    return [...by.values()]
+  })()
+  const issuedTotal = issued.reduce((t, c) => t + c.total, 0)
   const sub = parseAmount(subtotal) ?? 0
   const chosen = cheques.find((c) => c.id === chequeId)
   // The listed total includes this request's saved subtotal when it is already on that cheque.
   const otherOnCheque = chosen ? chosen.total - (fr.cheque_id === chosen.id ? fr.subtotal_to_fund ?? 0 : 0) : 0
-  const memoPreview =
-    usesCheque && mode === 'existing' && chosen
+  const memoPreview = itemCheques
+    ? issued.map((c) => `Check No. ${c.no} PHP ${money(c.total)}`).join(' | ')
+    : usesCheque && mode === 'existing' && chosen
       ? chequeMemo(chosen.cheque_no, otherOnCheque + sub, sub)
       : usesCheque && mode === 'new' && chequeNo
         ? chequeMemo(chequeNo, sub, sub)
@@ -144,17 +172,19 @@ export function FundRequestForm({
           {manual ? (
             <div className="fund-lines">
               <div className="label">6. Items *</div>
-              <div className="fund-line head small muted">
+              <div className={`fund-line head small muted${itemCheques ? ' with-cheque' : ''}`}>
                 <span>No.</span>
                 <span>Customer</span>
                 <span>Description *</span>
                 <span>Amount *</span>
                 <span>Tax *</span>
                 <span>Category *</span>
+                {itemCheques && <span>Cheque no. *</span>}
+                {itemCheques && <span>Cheque amount *</span>}
                 <span />
               </div>
               {lines.map((l, i) => (
-                <div className="fund-line" key={l.key}>
+                <div className={`fund-line${itemCheques ? ' with-cheque' : ''}`} key={l.key}>
                   <span className="muted">{i + 1}</span>
                   <input
                     name="line_customer"
@@ -194,6 +224,26 @@ export function FundRequestForm({
                     defaultValue={l.category}
                     onChange={(v) => setLine(l.key, { category: v })}
                   />
+                  {itemCheques && (
+                    <input
+                      name="line_cheque_no"
+                      aria-label={`Item ${i + 1} cheque number`}
+                      value={l.chequeNo}
+                      onChange={(e) => setLine(l.key, { chequeNo: e.target.value })}
+                    />
+                  )}
+                  {itemCheques && (
+                    <input
+                      name="line_cheque_amount"
+                      aria-label={`Item ${i + 1} cheque amount`}
+                      inputMode="decimal"
+                      className="num"
+                      placeholder={l.amount || '0.00'}
+                      title="Same as the item amount unless you type another"
+                      value={l.chequeAmount}
+                      onChange={(e) => setLine(l.key, { chequeAmount: e.target.value })}
+                    />
+                  )}
                   <button
                     type="button"
                     className="btn secondary small"
@@ -210,7 +260,8 @@ export function FundRequestForm({
                   type="button"
                   className="btn secondary small"
                   onClick={() => {
-                    setLines([...lines, { key: nextKey, customer: '', description: '', amount: '', tax: lines[lines.length - 1]?.tax ?? '', category: '' }])
+                    const last = lines[lines.length - 1]
+                    setLines([...lines, { key: nextKey, customer: '', description: '', amount: '', tax: last?.tax ?? '', category: '', chequeNo: '', chequeAmount: '' }])
                     setNextKey(nextKey + 1)
                   }}
                 >
@@ -309,7 +360,44 @@ export function FundRequestForm({
           </div>
         </section>
 
-        {usesCheque && (
+        {itemCheques && (
+          <section className="card">
+            <h2>Cheques issued</h2>
+            <input type="hidden" name="cheque_mode" value="none" />
+            {issued.length === 0 ? (
+              <p className="muted small">Type a cheque number and amount on each item above. The cheques are listed here.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cheque no.</th>
+                      <th>Items</th>
+                      <th className="num">Amount (PHP)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {issued.map((c) => (
+                      <tr key={c.no}>
+                        <td>{c.no}</td>
+                        <td>{c.items.join(', ')}</td>
+                        <td className="num">{money(c.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colSpan={2}>Total to fund</th>
+                      <th className="num">{money(issuedTotal)}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {usesCheque && !itemCheques && (
           <section className="card">
             <h2>Cheque</h2>
             <div className="segmented" role="radiogroup">
@@ -376,7 +464,7 @@ export function FundRequestForm({
                 Go back to the automatic memo
               </button>
             ) : (
-              'Filled from the cheque until you edit it.'
+              `Filled from the cheque${itemCheques ? 's' : ''} until you edit it.`
             )}
           </p>
         </section>

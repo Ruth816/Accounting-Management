@@ -551,5 +551,27 @@ select save_fund_lines((select v from ids where k='tx'), jsonb_build_array(
 select t.eq((select total_before_tax::text || '|' || sales_tax::text || '|' || tax_code from fund_requests where id = (select v from ids where k='tx')),
             '1100.00|120.00|12% S - Services', 'per-item tax adds up');
 
+
+-- Check with items: cheque number and amount per item; the request lists the cheques issued.
+select t.as_user('adm');
+insert into ids values ('ck', create_check_payment_request());
+select save_fund_request((select v from ids where k='ck'), jsonb_build_object(
+  'ref_no', (select request_type::text from fund_requests where id = (select v from ids where k='ck')) || '- 2026 11 0904',
+  'payee', 'Meralco', 'payment_date', '2026-11-02', 'payment_method', 'Check', 'cheque_mode', 'none',
+  'payment_account', 'BDO Current Account', 'fund_approver_id', t.uid('adm')));
+select save_fund_lines((select v from ids where k='ck'), jsonb_build_array(
+  jsonb_build_object('description', 'Bill A', 'amount', '1000', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', '0001'),
+  jsonb_build_object('description', 'Bill B', 'amount', '500', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', ''),
+  jsonb_build_object('description', 'Bill C', 'amount', '200', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', '0001', 'cheque_amount', '150')));
+select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='ck')), 'cheque');
+select save_fund_lines((select v from ids where k='ck'), jsonb_build_array(
+  jsonb_build_object('description', 'Bill A', 'amount', '1000', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', '0001'),
+  jsonb_build_object('description', 'Bill B', 'amount', '500', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', '0002'),
+  jsonb_build_object('description', 'Bill C', 'amount', '200', 'tax_code', '12% S - Services', 'category', 'Rent', 'cheque_no', '0001', 'cheque_amount', '150')));
+select t.eq((select subtotal_to_fund::text || '|' || memo from fund_requests where id = (select v from ids where k='ck')),
+            '1650.00|Check No. 0001 PHP 1,150.00 | Check No. 0002 PHP 500.00', 'cheques per item are summed and listed in the memo');
+select submit_fund_request((select v from ids where k='ck'));
+select t.eq((select status::text from fund_requests where id = (select v from ids where k='ck')), 'pending_fund_approval', 'check with a cheque on every item can be sent');
+
 \o
 \echo ALL TESTS PASSED

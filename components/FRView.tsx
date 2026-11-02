@@ -62,7 +62,11 @@ export function FRView({
           </div>
         ))}
       </dl>
-      {fr.lines?.length ? (
+      {fr.lines?.length ? (() => {
+        const cheques = fr.lines.some((l) => l.cheque_no)
+        const issued = new Map<string, number>()
+        fr.lines.forEach((l) => l.cheque_no && issued.set(l.cheque_no, (issued.get(l.cheque_no) ?? 0) + Number(l.cheque_amount ?? 0)))
+        return (
         <>
           <h3>6. Items</h3>
           <div className="table-wrap">
@@ -75,6 +79,8 @@ export function FRView({
                   <th>Tax</th>
                   <th>Category</th>
                   <th className="num">Amount ({fr.currency})</th>
+                  {cheques && <th>Cheque no.</th>}
+                  {cheques && <th className="num">Cheque amount (PHP)</th>}
                 </tr>
               </thead>
               <tbody>
@@ -86,13 +92,45 @@ export function FRView({
                     <td>{l.tax_code ?? fr.tax_code}</td>
                     <td>{l.category}</td>
                     <td className="num">{l.amount === null ? '' : money(l.amount)}</td>
+                    {cheques && <td>{l.cheque_no}</td>}
+                    {cheques && <td className="num">{l.cheque_amount == null ? '' : money(l.cheque_amount)}</td>}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {issued.size > 0 && (
+            <>
+              <h3>Cheques issued</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cheque no.</th>
+                      <th className="num">Amount (PHP)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...issued].map(([no, total]) => (
+                      <tr key={no}>
+                        <td>{no}</td>
+                        <td className="num">{money(total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th>Total to fund</th>
+                      <th className="num">{money([...issued.values()].reduce((t, v) => t + v, 0))}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
         </>
-      ) : (
+        )
+      })() : (
         <>
           <h3>6. Description</h3>
           <p className="pre">{fr.description}</p>

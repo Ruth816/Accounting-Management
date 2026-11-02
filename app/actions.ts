@@ -120,12 +120,16 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
   const lineCategories = fd.getAll('line_category').map(String)
   const lineCustomers = fd.getAll('line_customer').map(String)
   const lineTaxes = fd.getAll('line_tax').map(String)
+  const lineChequeNos = fd.getAll('line_cheque_no').map(String)
+  const lineChequeAmounts = fd.getAll('line_cheque_amount').map(String)
   const lines = fd.getAll('line_description').map((d, i) => ({
     description: String(d),
     amount: lineAmounts[i] ?? '',
     category: lineCategories[i] ?? '',
     customer: lineCustomers[i] ?? '',
     tax_code: lineTaxes[i] ?? '',
+    cheque_no: lineChequeNos[i] ?? '',
+    cheque_amount: lineChequeAmounts[i] ?? '',
   }))
   if (hasLines) {
     // Also filled here so the request is complete even before the items update is run in Supabase.
