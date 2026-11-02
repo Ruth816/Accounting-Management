@@ -8,6 +8,10 @@ grant usage on schema t to authenticated;
 create function t.as_user(name text) returns void language sql security definer as $$
   select set_config('request.jwt.claim.sub', (select id::text from auth.users where email = name || '@x.test'), false);
 $$;
+-- The fund request made automatically when a payment request is approved.
+create function t.fr_of(pr uuid) returns uuid language sql security definer as $$
+  select fund_request_id from public.payment_requests where id = pr;
+$$;
 create function t.uid(name text) returns uuid language sql security definer as $$
   select id from auth.users where email = name || '@x.test';
 $$;
@@ -101,7 +105,9 @@ select approve_payment_request((select v from ids where k='pr'));
 
 -- Stage 2 -------------------------------------------------------------------
 select t.as_user('fr');
-insert into ids values ('fr', receive_payment_request((select v from ids where k='pr')));
+insert into ids values ('fr', t.fr_of((select v from ids where k='pr')));
+select t.eq((select status::text || '|' || (fund_requestor_id = t.uid('fr'))::text from fund_requests where id = (select v from ids where k='fr')),
+            'in_funding_preparation|true', 'approval creates the fund request for the Fund Requestor');
 select t.eq((select array[request_type::text, payee, item_no, currency, original_amount::text, payment_method, fund_approver_id::text]
              from fund_requests where id = (select v from ids where k='fr')),
             array['2', 'Meralco', '1-2', 'PHP', '1120.00', 'Check', t.uid('fa')::text], 'receive copies fields, NCR/No gives type 2');
@@ -170,7 +176,7 @@ select t.eq((select cheque_total(id) from cheques where cheque_no = '100200'), 2
 select t.as_user('appr');
 select approve_payment_request((select v from ids where k='pr'));
 select t.as_user('fr');
-insert into ids values ('fr2', receive_payment_request((select v from ids where k='pr')));
+insert into ids values ('fr2', t.fr_of((select v from ids where k='pr')));
 select save_fund_request((select v from ids where k='fr2'), jsonb_build_object(
   'ref_no', '2- 2026 10 0075', 'payment_date', '2026-10-21', 'payment_method', 'Check',
   'tax_code', '12% S - Goods', 'payment_account', 'BDO Current Account', 'category', 'Rent',
@@ -271,7 +277,7 @@ select t.expect_error(format('select delete_payment_request(%L, %L)', (select v 
 select t.as_user('appr');
 select approve_payment_request((select v from ids where k='dpr'));
 select t.as_user('fr');
-insert into ids values ('dfr', receive_payment_request((select v from ids where k='dpr')));
+insert into ids values ('dfr', t.fr_of((select v from ids where k='dpr')));
 select t.as_user('req');
 select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Delete its fund request first');
 select t.as_user('fa');
@@ -341,8 +347,8 @@ select t.as_user('appr');
 select approve_payment_request((select v from ids where k='kad'));
 select approve_payment_request((select v from ids where k='krb'));
 select t.as_user('fr');
-insert into ids values ('fkad', receive_payment_request((select v from ids where k='kad')));
-insert into ids values ('fkrb', receive_payment_request((select v from ids where k='krb')));
+insert into ids values ('fkad', t.fr_of((select v from ids where k='kad')));
+insert into ids values ('fkrb', t.fr_of((select v from ids where k='krb')));
 select t.eq((select array[request_type::text, payment_method, region] from fund_requests where id = (select v from ids where k='fkad')),
             array['1', 'Direct Debit', 'VisMin'], 'auto debit payment request gives fund type 1, Direct Debit, its region');
 select t.eq((select array[request_type::text, region] from fund_requests where id = (select v from ids where k='fkrb')),
@@ -384,8 +390,8 @@ select save_payment_request((select v from ids where k='apr2'), jsonb_build_obje
 select submit_payment_request((select v from ids where k='apr2'));
 select approve_payment_request((select v from ids where k='apr2'));
 select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='apr2')),
-            'Admin edited approved_awaiting_funding', 'Admin edits, submits and approves someone else''s request');
-insert into ids values ('afr2', receive_payment_request((select v from ids where k='apr2')));
+            'Admin edited in_funding_preparation', 'Admin edits, submits and approves someone else''s request');
+insert into ids values ('afr2', t.fr_of((select v from ids where k='apr2')));
 select t.eq((select count(*)::int from fund_requests where id = (select v from ids where k='afr2')), 1, 'Admin receives for funding');
 select t.eq((admin_hand_over(t.uid('fa'), t.uid('adm')) ->> 'fund_approvals')::int >= 0, true, 'hand over runs');
 select t.eq((select count(*)::int from profiles where default_fund_approver = t.uid('fa')), 0, 'defaults handed over');
@@ -415,7 +421,7 @@ select t.eq((select array[status::text, approver_id::text, first_approver_id::te
             array['pending_payment_approval', t.uid('hm')::text, t.uid('jon')::text], 'approver 1 passes it to approver 2');
 select t.as_user('hm');
 select approve_payment_request((select v from ids where k='rv'));
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='rv')), 'approved_awaiting_funding', 'approver 2 gives final approval');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rv')), 'in_funding_preparation', 'approver 2 gives final approval');
 select t.as_user('req');
 insert into ids values ('rn', save_payment_request(null, jsonb_build_object(
   'payable_to', 'NCR site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'VisMin',
@@ -423,7 +429,7 @@ insert into ids values ('rn', save_payment_request(null, jsonb_build_object(
 select submit_payment_request((select v from ids where k='rn'));
 select t.as_user('adm');
 select approve_payment_request((select v from ids where k='rn'));
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn')), 'approved_awaiting_funding', 'Admin approval at step 1 is final');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn')), 'in_funding_preparation', 'Admin approval at step 1 is final');
 select t.as_user('req');
 insert into ids values ('rn2', save_payment_request(null, jsonb_build_object(
   'payable_to', 'NCR site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
@@ -432,7 +438,7 @@ select submit_payment_request((select v from ids where k='rn2'));
 select t.eq((select approver_id from payment_requests where id = (select v from ids where k='rn2')), t.uid('hm'), 'NCR goes to its one approver');
 select t.as_user('hm');
 select approve_payment_request((select v from ids where k='rn2'));
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn2')), 'approved_awaiting_funding', 'NCR approved in one step');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn2')), 'in_funding_preparation', 'NCR approved in one step');
 -- An approver routed for one region sees only that region (Ruth, 2 November).
 select t.as_user('jon');
 select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn2')), 0, 'VisMin-only approver cannot see NCR');
@@ -462,11 +468,11 @@ select t.as_user('fr');
 select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rv')), 0, 'NCR fund requestor cannot see a VisMin payment request');
 select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn2')), 1, 'NCR fund requestor sees an NCR payment request');
 select t.eq(can_see_pr((select v from ids where k='rv')), false, 'can_see_pr follows the region');
-select t.expect_error(format('select receive_payment_request(%L)', (select v from ids where k='rv')), 'another region');
-insert into ids values ('nfr', receive_payment_request((select v from ids where k='rn2')));
+select t.expect_error(format('select receive_payment_request(%L)', (select v from ids where k='rv')), 'another region|not waiting');
+insert into ids values ('nfr', t.fr_of((select v from ids where k='rn2')));
 select t.eq((select region from fund_requests where id = (select v from ids where k='nfr')), 'NCR', 'NCR fund requestor receives NCR');
 select t.as_user('adm');
-insert into ids values ('vfr', receive_payment_request((select v from ids where k='rv')));
+insert into ids values ('vfr', t.fr_of((select v from ids where k='rv')));
 select t.as_user('fr');
 select t.eq((select count(*)::int from fund_requests where id = (select v from ids where k='vfr')), 0, 'NCR fund requestor cannot see a VisMin fund request');
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='vfr'), '{}'), 'another region|not found');
@@ -512,7 +518,7 @@ insert into ids values ('dd', save_payment_request(null, jsonb_build_object(
 select submit_payment_request((select v from ids where k='dd'));
 select t.as_user('adm');
 select approve_payment_request((select v from ids where k='dd'));
-insert into ids values ('ddf', receive_payment_request((select v from ids where k='dd')));
+insert into ids values ('ddf', t.fr_of((select v from ids where k='dd')));
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ddf')), 'Direct Debit', 'Direct Debit payment type gives a Direct Debit fund request');
 
 -- Fund requests: an Admin may prepare and approve their own (Ruth, 1 November).
