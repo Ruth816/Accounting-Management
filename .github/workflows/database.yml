@@ -1,0 +1,24 @@
+name: Database updates
+
+# Applies new Supabase migrations to the live database whenever they reach main.
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**', 'scripts/apply-migrations.sh']
+  workflow_dispatch:
+
+concurrency:
+  group: database
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+      - name: Apply new migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: scripts/apply-migrations.sh
