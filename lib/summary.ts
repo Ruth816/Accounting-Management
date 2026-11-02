@@ -118,7 +118,7 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
       type: frTypeLabel(f),
       method: f.payment_method ?? '',
       account: f.payment_account ?? '',
-      cheque: f.cheques?.cheque_no ?? '',
+      cheque: f.cheques?.cheque_no ?? chequeList(f.lines),
       currency: 'PHP',
       amount: Number(f.subtotal_to_fund ?? f.amount_php ?? 0),
       approver: name(f.approved_by),
@@ -153,4 +153,9 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     approver: name(r.approver_id),
     status: r.status,
   }))
+}
+
+// Cheque numbers typed on the items of a Check request, each listed once.
+function chequeList(lines: { cheque_no?: string | null }[] | null | undefined) {
+  return [...new Set((lines ?? []).map((l) => l.cheque_no).filter(Boolean))].join(', ')
 }
