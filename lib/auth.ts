@@ -14,14 +14,15 @@ export const getMe = cache(async () => {
   // An Admin covers every role (Ruth, 1 November), so is() is true for them.
   const is = (r: Role) => profile.roles.includes(r) || profile.roles.includes('admin')
   // Requestors with a region see only that region (Ruth, 1 November).
-  // Admins and approvers on both regions' routing see every region.
+  // Admins and approvers routed for both regions see every region.
   const limited = !profile.roles.some((r) => r === 'admin' || r === 'payment_approver' || r === 'fund_approver')
   let myRegion = limited ? (profile.region ?? null) : null
-  // A Payment Approver routed for one region only sees that region (Ruth, 2 November).
+  // A Payment Approver sees only their Region, or the one region they are routed for;
+  // one routed for both regions sees both (Ruth, 2 November).
   if (!myRegion && profile.roles.includes('payment_approver') && !profile.roles.includes('admin')) {
     const { data: routes } = await supabase.from('approval_routes').select('region').eq('approver_id', uid)
     const regions = [...new Set((routes ?? []).map((r: { region: 'NCR' | 'VisMin' }) => r.region))]
-    if (regions.length === 1) myRegion = regions[0]
+    if (regions.length < 2) myRegion = profile.region ?? regions[0] ?? null
   }
   return { supabase, me: profile, is, myRegion, limited }
 })

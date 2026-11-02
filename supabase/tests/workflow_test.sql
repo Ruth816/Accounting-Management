@@ -442,6 +442,11 @@ select t.as_user('hm');
 select t.eq((select count(*)::int from payment_requests where id in ((select v from ids where k='rn2'), (select v from ids where k='rn'))), 2, 'approver on both regions sees both');
 select t.as_user('adm');
 select admin_set_routes('{}'::jsonb);
+-- With no routing, the approver's own Region still limits them.
+select admin_update_user(t.uid('jon'), '{"roles":["payment_approver"], "region":"VisMin"}');
+select t.as_user('jon');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn2')), 0, 'approver with Region VisMin cannot see NCR');
+select t.as_user('adm');
 
 -- Region lock: an NCR requestor sees and files only NCR; VisMin only VisMin.
 select t.as_user('adm');

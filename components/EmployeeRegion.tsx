@@ -34,7 +34,7 @@ export function EmployeeRegion({
         />
       </label>
       <label className={cls}>
-        <span className="label">Region (requestors see only this)</span>
+        <span className="label">Region (requestors and approvers see only this)</span>
         <select form={form} name="region" value={reg} onChange={(e) => setReg(e.target.value)}>
           <option value="">Both regions</option>
           <option value="NCR">NCR only</option>
