@@ -119,11 +119,13 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
   const lineAmounts = fd.getAll('line_amount').map(String)
   const lineCategories = fd.getAll('line_category').map(String)
   const lineCustomers = fd.getAll('line_customer').map(String)
+  const lineTaxes = fd.getAll('line_tax').map(String)
   const lines = fd.getAll('line_description').map((d, i) => ({
     description: String(d),
     amount: lineAmounts[i] ?? '',
     category: lineCategories[i] ?? '',
     customer: lineCustomers[i] ?? '',
+    tax_code: lineTaxes[i] ?? '',
   }))
   if (hasLines) {
     // Also filled here so the request is complete even before the items update is run in Supabase.
@@ -133,6 +135,7 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
       used.length === 1 ? used[0].description.trim() : used.map((l, i) => `${i + 1}. ${l.description.trim()}`).join('\n') || null
     payload.original_amount = used.some((l) => l.amount.trim()) ? sum.toFixed(2) : null
     payload.category = used[0]?.category || null
+    if (used[0]?.tax_code) payload.tax_code = used[0].tax_code
   }
   const { error } = await supabase.rpc('save_fund_request', { p_id: id, p: payload })
   if (error) return { error: error.message }

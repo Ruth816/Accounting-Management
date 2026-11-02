@@ -30,12 +30,12 @@ export function FundRequestForm({
   const [currency, setCurrency] = useState(fr.currency)
   const [originalTyped, setOriginal] = useState(fr.original_amount === null ? '' : String(fr.original_amount))
   // Auto debit / check payment: several items, each with its own category (Ruth, 1 November).
-  type EditLine = { key: number; customer: string; description: string; amount: string; category: string }
+  type EditLine = { key: number; customer: string; description: string; amount: string; tax: string; category: string }
   const [lines, setLines] = useState<EditLine[]>(() =>
     (fr.lines?.length
       ? fr.lines
-      : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category, customer: null }]
-    ).map((l, i) => ({ key: i, customer: l.customer ?? '', description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
+      : [{ description: fr.description ?? '', amount: fr.original_amount, category: fr.category, customer: null, tax_code: fr.tax_code }]
+    ).map((l, i) => ({ key: i, customer: l.customer ?? '', tax: l.tax_code ?? '', description: l.description ?? '', amount: l.amount === null ? '' : String(l.amount), category: l.category ?? '' })),
   )
   const [nextKey, setNextKey] = useState(lines.length)
   const linesTotal = lines.reduce((t, l) => t + (parseAmount(l.amount) ?? 0), 0)
@@ -53,7 +53,16 @@ export function FundRequestForm({
   const [memo, setMemo] = useState(fr.memo ?? '')
 
   const taxRate = fr.tax_locked ? fr.tax_rate : list('tax_code').find((t) => t.label === tax)?.rate ?? null
-  const amounts = fundAmounts(parseAmount(original), currency === 'PHP' ? 1 : parseAmount(rate), taxRate === null ? null : Number(taxRate))
+  const fx = currency === 'PHP' ? 1 : parseAmount(rate)
+  const rateOf = (code: string) => list('tax_code').find((t) => t.label === code)?.rate ?? null
+  const amounts = (() => {
+    const whole = fundAmounts(parseAmount(original), fx, taxRate === null ? null : Number(taxRate))
+    if (!manual || whole.amount === null || fx === null) return whole
+    // Each item's own tax (Ruth, 2 November).
+    if (lines.some((l) => !l.tax || rateOf(l.tax) === null)) return { ...whole, beforeTax: null, salesTax: null }
+    const beforeTax = Math.round(lines.reduce((t, l) => t + Math.round(((parseAmount(l.amount) ?? 0) * fx * 100) / (1 + Number(rateOf(l.tax)))), 0)) / 100
+    return { amount: whole.amount, beforeTax, salesTax: Math.round((whole.amount - beforeTax) * 100) / 100 }
+  })()
   // Auto debit issues no cheque (Ruth, 1 November); cheques belong to Check.
   const usesCheque = method === 'Check'
   const sub = parseAmount(subtotal) ?? 0
@@ -140,6 +149,7 @@ export function FundRequestForm({
                 <span>Customer</span>
                 <span>Description *</span>
                 <span>Amount *</span>
+                <span>Tax *</span>
                 <span>Category *</span>
                 <span />
               </div>
@@ -167,6 +177,17 @@ export function FundRequestForm({
                     value={l.amount}
                     onChange={(e) => setLine(l.key, { amount: e.target.value })}
                   />
+                  <select
+                    name="line_tax"
+                    aria-label={`Item ${i + 1} tax`}
+                    value={l.tax}
+                    onChange={(e) => setLine(l.key, { tax: e.target.value })}
+                  >
+                    <option value="">Choose</option>
+                    {list('tax_code').map((t) => (
+                      <option key={t.id}>{t.label}</option>
+                    ))}
+                  </select>
                   <SearchSelect
                     name="line_category"
                     options={accountOptions(list('category'))}
@@ -189,7 +210,7 @@ export function FundRequestForm({
                   type="button"
                   className="btn secondary small"
                   onClick={() => {
-                    setLines([...lines, { key: nextKey, customer: '', description: '', amount: '', category: '' }])
+                    setLines([...lines, { key: nextKey, customer: '', description: '', amount: '', tax: lines[lines.length - 1]?.tax ?? '', category: '' }])
                     setNextKey(nextKey + 1)
                   }}
                 >
@@ -237,6 +258,7 @@ export function FundRequestForm({
                 </Field>
               </>
             )}
+            {!manual && (
             <Field label="8. Tax *" hint={fr.tax_locked ? 'No VAT because the payment request is not VAT-billed' : undefined}>
               <select name="tax_code" value={tax} onChange={(e) => setTax(e.target.value)} disabled={fr.tax_locked}>
                 <option value="">Choose</option>
@@ -245,6 +267,7 @@ export function FundRequestForm({
                 ))}
               </select>
             </Field>
+            )}
           </div>
           <dl className="amounts">
             <dt className="strong">7. Amount, PHP, inclusive of tax</dt>
