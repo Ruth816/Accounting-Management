@@ -5,7 +5,10 @@
 # Needs SUPABASE_DB_URL (the database connection string, session pooler).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-: "${SUPABASE_DB_URL:?Add the SUPABASE_DB_URL repository secret in GitHub}"
+if [ -z "${SUPABASE_DB_URL:-}" ]; then
+  echo "::warning::SUPABASE_DB_URL secret is not set yet, so no database update was applied."
+  exit 0
+fi
 PSQL=(psql "$SUPABASE_DB_URL" -X -q -v ON_ERROR_STOP=1)
 
 # Everything up to here was applied by hand from 2026-11-01-database-updates.sql.
