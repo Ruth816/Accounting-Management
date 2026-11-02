@@ -433,6 +433,13 @@ select t.eq((select approver_id from payment_requests where id = (select v from 
 select t.as_user('hm');
 select approve_payment_request((select v from ids where k='rn2'));
 select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn2')), 'approved_awaiting_funding', 'NCR approved in one step');
+-- An approver routed for one region sees only that region (Ruth, 2 November).
+select t.as_user('jon');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn2')), 0, 'VisMin-only approver cannot see NCR');
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='rn')), 1, 'VisMin-only approver sees VisMin');
+select t.eq(can_see_pr((select v from ids where k='rn2')), false, 'VisMin-only approver cannot open NCR');
+select t.as_user('hm');
+select t.eq((select count(*)::int from payment_requests where id in ((select v from ids where k='rn2'), (select v from ids where k='rn'))), 2, 'approver on both regions sees both');
 select t.as_user('adm');
 select admin_set_routes('{}'::jsonb);
 
