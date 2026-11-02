@@ -532,12 +532,24 @@ select save_fund_lines((select v from ids where k='mi'), jsonb_build_array(
 select t.eq((select original_amount::text || '|' || description || '|' || category || '|' || jsonb_array_length(lines)
              from fund_requests where id = (select v from ids where k='mi')),
             E'1250.50|1. Internet\n2. Phone|Rent|2', 'items set amount, description and category');
-select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='mi')), 'Every item needs');
+select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='mi')), 'Every item needs|Tax is required');
 select save_fund_lines((select v from ids where k='mi'), jsonb_build_array(
-  jsonb_build_object('description', 'Internet', 'amount', '1000', 'category', 'Rent'),
-  jsonb_build_object('description', 'Phone', 'amount', '250.50', 'category', 'Rent')));
+  jsonb_build_object('description', 'Internet', 'amount', '1000', 'tax_code', '12% S - Services', 'category', 'Rent'),
+  jsonb_build_object('description', 'Phone', 'amount', '250.50', 'tax_code', '12% S - Services', 'category', 'Rent')));
 select submit_fund_request((select v from ids where k='mi'));
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='mi')), 'pending_fund_approval', 'complete items can be sent');
+
+-- Tax per item: each item's own tax adds up to the totals.
+select t.as_user('adm');
+insert into ids values ('tx', create_auto_debit_request());
+select save_fund_request((select v from ids where k='tx'), jsonb_build_object(
+  'ref_no', '1- 2026 11 0903', 'payee', 'Globe', 'payment_date', '2026-11-02', 'payment_method', 'Direct Debit',
+  'payment_account', 'BDO Current Account', 'fund_approver_id', t.uid('adm')));
+select save_fund_lines((select v from ids where k='tx'), jsonb_build_array(
+  jsonb_build_object('description', 'Service', 'amount', '1120', 'tax_code', '12% S - Services', 'category', 'Rent'),
+  jsonb_build_object('description', 'Fee', 'amount', '100', 'tax_code', 'No VAT (0%)', 'category', 'Rent')));
+select t.eq((select total_before_tax::text || '|' || sales_tax::text || '|' || tax_code from fund_requests where id = (select v from ids where k='tx')),
+            '1100.00|120.00|12% S - Services', 'per-item tax adds up');
 
 \o
 \echo ALL TESTS PASSED

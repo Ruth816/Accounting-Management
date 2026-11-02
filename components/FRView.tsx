@@ -72,6 +72,7 @@ export function FRView({
                   <th>No.</th>
                   <th>Customer</th>
                   <th>Description</th>
+                  <th>Tax</th>
                   <th>Category</th>
                   <th className="num">Amount ({fr.currency})</th>
                 </tr>
@@ -82,6 +83,7 @@ export function FRView({
                     <td>{i + 1}</td>
                     <td>{l.customer || fr.payee}</td>
                     <td>{l.description}</td>
+                    <td>{l.tax_code ?? fr.tax_code}</td>
                     <td>{l.category}</td>
                     <td className="num">{l.amount === null ? '' : money(l.amount)}</td>
                   </tr>
