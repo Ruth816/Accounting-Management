@@ -4,6 +4,7 @@ import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
 import { adminCreateUser, adminHandOver, adminLookup, adminSetRoutes, sendQueuedSmsNow } from '@/app/actions'
 import { getRoutes } from '@/lib/routes'
+import { usersByRole } from '@/lib/usersByRole'
 import { UserRow } from '@/components/UserRow'
 import { fmtDateTime } from '@/lib/format'
 import { smsCredit } from '@/lib/sms'
@@ -27,7 +28,7 @@ export default async function AdminPage() {
     smsCredit(),
   ])
   const profiles = (users ?? []) as Profile[]
-  const routes = await getRoutes()
+  const [routes, roleGroups] = await Promise.all([getRoutes(), usersByRole()])
   const routeChoices = profiles.filter((p) => p.active && (p.roles.includes('payment_approver') || p.roles.includes('admin')))
   const pas = profiles.filter((p) => p.active && p.roles.includes('payment_approver'))
   const fas = profiles.filter((p) => p.active && p.roles.includes('fund_approver'))
@@ -80,6 +81,51 @@ export default async function AdminPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="card" id="users-by-role">
+        <div className="row">
+          <h2>Users by role</h2>
+          <a className="btn secondary small" href="/admin/users-by-role" download>
+            Download CSV
+          </a>
+        </div>
+        <p className="muted small">Each person is listed under every role they have. Region &quot;Both&quot; means no region is set.</p>
+        {roleGroups.map((g) => (
+          <div key={g.role}>
+            <h3>
+              {g.label} <span className="count">{g.rows.length}</span>
+            </h3>
+            {g.rows.length === 0 ? (
+              <p className="muted small">No one yet.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Employee ID</th>
+                      <th>Region</th>
+                      {(g.role === 'payment_approver' || g.role === 'admin') && <th>Payment approval order</th>}
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.rows.map((r) => (
+                      <tr key={r.email}>
+                        <td>{r.name}</td>
+                        <td>{r.employeeId}</td>
+                        <td>{r.region}</td>
+                        {(g.role === 'payment_approver' || g.role === 'admin') && <td>{r.order || '–'}</td>}
+                        <td>{r.active ? 'Active' : 'Inactive'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
       </section>
 
       <section className="card">
