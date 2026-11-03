@@ -85,46 +85,55 @@ export default async function AdminPage() {
 
       <section className="card" id="users-by-role">
         <div className="row">
-          <h2>Users by role</h2>
+          <h2>Users by region</h2>
           <a className="btn secondary small" href="/admin/users-by-role" download>
             Download CSV
           </a>
         </div>
-        <p className="muted small">Each person is listed under every role they have. Region &quot;Both&quot; means no region is set.</p>
+        <p className="muted small">
+          NCR and VisMin are listed apart for turnover. Approvers also appear in every region they approve for. People with no
+          region set are under Both regions.
+        </p>
         {roleGroups.map((g) => (
-          <div key={g.role}>
-            <h3>
-              {g.label} <span className="count">{g.rows.length}</span>
-            </h3>
-            {g.rows.length === 0 ? (
-              <p className="muted small">No one yet.</p>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Employee ID</th>
-                      <th>Region</th>
-                      {(g.role === 'payment_approver' || g.role === 'admin') && <th>Payment approval order</th>}
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.rows.map((r) => (
-                      <tr key={r.email}>
-                        <td>{r.name}</td>
-                        <td>{r.employeeId}</td>
-                        <td>{r.region}</td>
-                        {(g.role === 'payment_approver' || g.role === 'admin') && <td>{r.order || '–'}</td>}
-                        <td>{r.active ? 'Active' : 'Inactive'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <details key={g.region} className="region-users" open={g.region !== 'Both'}>
+            <summary>
+              <h3>
+                {g.label} <span className="count">{new Set(g.roles.flatMap((r) => r.rows.map((u) => u.email))).size}</span>
+              </h3>
+            </summary>
+            {g.roles
+              .filter((r) => r.rows.length > 0)
+              .map((r) => (
+                <div key={r.role}>
+                  <h4>
+                    {r.label} <span className="count">{r.rows.length}</span>
+                  </h4>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Employee ID</th>
+                          {(r.role === 'payment_approver' || r.role === 'admin') && <th>Approval order</th>}
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {r.rows.map((u) => (
+                          <tr key={u.email}>
+                            <td>{u.name}</td>
+                            <td>{u.employeeId}</td>
+                            {(r.role === 'payment_approver' || r.role === 'admin') && <td>{u.order || '–'}</td>}
+                            <td>{u.active ? 'Active' : 'Inactive'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            {g.roles.every((r) => r.rows.length === 0) && <p className="muted small">No one yet.</p>}
+          </details>
         ))}
       </section>
 
