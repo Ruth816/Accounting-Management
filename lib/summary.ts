@@ -28,6 +28,7 @@ export type SummaryRow = {
   itemCount: number
   itemNo: string // items covered, e.g. "1-3"
   payDate: string | null
+  reqNo: string // payment request REQ No., when the fund request came from one
 }
 
 export type Totals = Record<string, number> // per currency
@@ -124,6 +125,7 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     region: frRegionOf(f as { region: string | null; request_type: number }),
     ...itemsOf(f),
     payDate: f.payment_date ?? null,
+    reqNo: '',
   })
 
   if (kind === 'funding') {
@@ -138,7 +140,14 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
       .limit(10000)
     if (approver !== 'all') q = q.eq('approved_by', approver)
     const { data } = await q
-    return (data ?? []).map((f) => toRow(f, f.approved_on))
+    const rows = (data ?? []).map((f) => toRow(f, f.approved_on))
+    const withPr = (data ?? []).filter((f) => f.payment_request_id).map((f) => f.id)
+    if (withPr.length) {
+      const { data: nos } = await supabase.rpc('fr_req_nos', { p_frs: withPr })
+      const byId = new Map(((nos ?? []) as { fund_request_id: string; req_no: string }[]).map((n) => [n.fund_request_id, n.req_no]))
+      for (const r of rows) r.reqNo = byId.get(r.id) ?? ''
+    }
+    return rows
   }
 
   // QuickBooks: locked fund requests, dated by when they were exported.

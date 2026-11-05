@@ -31,7 +31,7 @@ export async function exportSummary(kind: SummaryKind, req: Request) {
   out.push('')
   if (kind === 'funding') {
     // Ready for funding: grouped by day, region and type of request, with totals.
-    out.push(line(['Date approved', 'Region', 'Type of request', 'Fund request no.', 'No. of items', 'Items covered', 'Payment date', 'Amount (PHP)']))
+    out.push(line(['Date approved', 'Region', 'Type of request', 'Ref no.', 'Request no.', 'No. of items', 'Items covered', 'Payment date', 'Amount (PHP)']))
     const sorted = [...rows].sort((x, y) => x.day.localeCompare(y.day) || x.region.localeCompare(y.region) || x.type.localeCompare(y.type))
     for (const d of [...new Set(sorted.map((r) => r.day))]) {
       const dr = sorted.filter((r) => r.day === d)
@@ -39,12 +39,12 @@ export async function exportSummary(kind: SummaryKind, req: Request) {
         const rr = dr.filter((r) => r.region === reg)
         for (const ty of [...new Set(rr.map((r) => r.type))]) {
           const tr = rr.filter((r) => r.type === ty)
-          for (const r of tr) out.push(line([r.day, r.region, r.type, r.ref, r.itemCount, r.itemNo, r.payDate ?? '', r.amount.toFixed(2)]))
-          out.push(line(['', '', `${ty} total`, '', tr.length, '', '', fmtTotals(sumRows(tr))]))
+          for (const r of tr) out.push(line([r.day, r.region, r.type, r.ref, r.reqNo, r.itemCount, r.itemNo, r.payDate ?? '', r.amount.toFixed(2)]))
+          out.push(line(['', '', `${ty} total`, '', '', tr.length, '', '', fmtTotals(sumRows(tr))]))
         }
-        out.push(line(['', `${reg} total`, '', '', rr.length, '', '', fmtTotals(sumRows(rr))]))
+        out.push(line(['', `${reg} total`, '', '', '', rr.length, '', '', fmtTotals(sumRows(rr))]))
       }
-      out.push(line([`Total for ${d}`, '', '', '', dr.length, '', '', fmtTotals(sumRows(dr))]))
+      out.push(line([`Total for ${d}`, '', '', '', '', dr.length, '', '', fmtTotals(sumRows(dr))]))
       out.push('')
     }
   } else {
