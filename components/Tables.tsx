@@ -29,6 +29,7 @@ export function PRTable({
             <th>Type</th>
             <th>Region</th>
             <th>Payable to</th>
+            <th>Items</th>
             <th>Requested by</th>
             <th className="num">Amount due</th>
             <th>Required</th>
@@ -45,6 +46,9 @@ export function PRTable({
               <td>{prKindLabel(r)}</td>
               <td>{r.region}</td>
               <td>{r.payable_to}</td>
+              <td>
+                <ItemList items={(r.items ?? []).map((i) => i.description)} />
+              </td>
               <td>{name(r.requestor_id)}</td>
               <td className="num">
                 {r.currency} {money(r.total_due)}
@@ -95,6 +99,7 @@ export function FRTable({
             <th>Type</th>
             <th>Region</th>
             <th>Payee</th>
+            <th>Items</th>
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
             <th>Status</th>
@@ -110,6 +115,9 @@ export function FRTable({
               <td>{frTypeLabel(f)}</td>
               <td>{frRegionOf(f)}</td>
               <td>{f.payee}</td>
+              <td>
+                <ItemList items={frItems(f)} />
+              </td>
               <td className="num">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td>{fmtDate(f.payment_date)}</td>
               <td>
@@ -135,5 +143,28 @@ export function FRTable({
         </tbody>
       </table>
     </div>
+  )
+}
+
+// The items of each request, shown in every list (Ruth, 5 November).
+function frItems(f: FundRequest): string[] {
+  if (f.lines?.length) return f.lines.map((l) => l.description)
+  // From a payment request: the purpose, then "1. item" lines.
+  const lines = (f.description ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+  const numbered = lines.filter((l) => /^\d+\.\s/.test(l)).map((l) => l.replace(/^\d+\.\s+/, ''))
+  return numbered.length ? numbered : lines
+}
+
+function ItemList({ items }: { items: string[] }) {
+  const shown = items.map((i) => i.trim()).filter(Boolean)
+  if (!shown.length) return <span className="muted">–</span>
+  const max = 3
+  return (
+    <ul className="item-list" title={shown.join('\n')}>
+      {shown.slice(0, max).map((d, i) => (
+        <li key={i}>{d}</li>
+      ))}
+      {shown.length > max && <li className="muted">+{shown.length - max} more</li>}
+    </ul>
   )
 }
