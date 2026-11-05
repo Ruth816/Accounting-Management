@@ -72,7 +72,7 @@ export default async function Dashboard() {
       .eq('approved_by', me.id).gte('approved_on', todayStart).neq('status', 'cancelled')
     done.push({ value: n ?? 0, label: 'fund requests you approved today · open Ready for funding', href: '/summary/funding' })
   }
-  if (is('payment_approver') || is('fund_approver') || is('admin')) {
+  if (is('fund_approver') || is('admin')) {
     const { data: exported } = await supabase.rpc('qb_imported_summary', { p_from: todayStart, p_to: new Date(Date.now() + 864e5).toISOString() })
     done.push({ value: exported?.length ?? 0, label: 'fund requests exported to QuickBooks today · open the QuickBooks imported summary', href: '/summary/quickbooks' })
   }

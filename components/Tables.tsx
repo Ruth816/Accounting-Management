@@ -1,5 +1,7 @@
 import Link from 'next/link'
-import { StatusBadge } from './StatusBadge'
+import { FRStatusBadge, StatusBadge } from './StatusBadge'
+import { ActionForm, Submit } from './ActionForm'
+import { requestAction } from '@/app/actions'
 import { DeleteButton } from './DeleteButton'
 import { EditButton } from './EditButton'
 import { fmtDate, money } from '@/lib/format'
@@ -83,11 +85,13 @@ export function FRTable({
   empty = 'Nothing here.',
   canDelete,
   canEdit,
+  canMarkReady,
 }: {
   rows: FundRequest[]
   empty?: string
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => boolean
+  canMarkReady?: (f: FundRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -121,7 +125,13 @@ export function FRTable({
               <td className="num" data-label="Amount (PHP)">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td data-label="Payment date">{fmtDate(f.payment_date)}</td>
               <td data-label="Status">
-                <StatusBadge status={f.status} />
+                {canMarkReady?.(f) ? (
+                  <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: f.id }} confirm="Put this request on Ready for funding for today?">
+                    <Submit className="btn small">Ready for funding</Submit>
+                  </ActionForm>
+                ) : (
+                  <FRStatusBadge f={f} />
+                )}
               </td>
               {(canDelete || canEdit) && (
                 <td data-label="">

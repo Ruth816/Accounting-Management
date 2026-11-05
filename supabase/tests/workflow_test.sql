@@ -521,6 +521,14 @@ set role authenticated;
 select t.as_user('fr');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'role');
 select t.as_user('adm');
+-- Stages (Ruth, 5 November): ready for funding, then funded, then QuickBooks.
+select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
+select t.expect_error(format('select mark_funded(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Nothing on this day');
+select mark_ready_for_funding((select v from ids where k='fr2'));
+select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'Ready for funding puts it on the funding list');
+select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
+select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
+select t.eq(mark_funded(array[(select v from ids where k='fr2')]), 1, 'marks the day funded');
 select t.eq(mark_posted_to_qb(array[(select v from ids where k='fr2')]), 1, 'marks one request posted');
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='fr2')), 'approved_posted_to_qb', 'status is posted to QuickBooks');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Tick at least one');
@@ -532,7 +540,7 @@ select t.expect_error(format('select delete_fund_request(%L, %L)', (select v fro
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'admin sees the exported request in the QuickBooks summary');
 select t.eq((select req_no from fr_req_nos(array[(select v from ids where k='fr2')])), (select req_no from payment_requests where id = (select v from ids where k='pr')), 'Ready for funding shows the REQ No. behind a fund request');
 select t.as_user('appr');
-select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'payment approver sees the exported request');
+select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day'))::int, 0, 'a payment approver no longer sees the QuickBooks summary');
 select t.as_user('fr');
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day'))::int, 0, 'a fund requestor sees nothing in the QuickBooks summary');
 select t.as_user('adm');

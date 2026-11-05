@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PrintButton } from './PrintButton'
 import { StatusBadge } from './StatusBadge'
-import { POST_QB_FORM, PostQbForm } from './PostQbForm'
+import { POST_QB_FORM, PostQbForm, QB_CONFIRM } from './PostQbForm'
+import { ActionForm, Submit } from './ActionForm'
+import { requestAction } from '@/app/actions'
 import { fmtDate, fmtDateTime, money } from '@/lib/format'
 import {
   KIND_INFO,
@@ -136,7 +138,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
       </div>
 
       {kind === 'funding' ? (
-        <FundingDay day={day} rows={dayRows} canPost={canPost} postable={postable} postCount={postCount} />
+        <FundingDay day={day} rows={dayRows} canAct={canPost} />
       ) : (
       <section className="card">
         <h2>{info.verb === 'exported' ? 'Exported' : 'Approved'} on {fmtDate(day)}</h2>
@@ -325,29 +327,24 @@ const REGIONS = ['NCR', 'VisMin'] as const
 
 // Ready for funding (Ruth, 5 November): the day's requests grouped by region, then by
 // type of request, with only the ref no., items covered, date and amount, and
-// a total for each group and for the day.
-function FundingDay({
-  day,
-  rows,
-  canPost,
-  postable,
-  postCount,
-}: {
-  day: string
-  rows: SummaryRow[]
-  canPost: boolean
-  postable: (r: SummaryRow) => boolean
-  postCount: number
-}) {
+// a total for each group and for the day. The day total carries the next step:
+// Mark as funded, then Ready to import to QuickBooks.
+function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; canAct: boolean }) {
   const voucherOk = (r: SummaryRow) => ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status)
+  const open = (r: SummaryRow) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed'
+  const toFund = rows.filter((r) => open(r) && !r.funded)
+  const toImport = rows.filter((r) => open(r) && r.funded)
+  const imported = rows.filter((r) => r.status === 'approved_posted_to_qb')
+  const stage = (r: SummaryRow) => (r.status === 'approved_posted_to_qb' ? 'Imported to QuickBooks' : r.funded ? 'Funded' : 'Not yet funded')
   return (
     <section className="card">
       <div className="req-group-head">
         <h2>Ready for funding on {fmtDate(day)}</h2>
         <span className="req-group-total">Total for the day: {fmtTotals(sumRows(rows))}</span>
       </div>
-      {canPost && <PostQbForm count={postCount} />}
-      {rows.length === 0 && <p className="muted">Nothing was approved for funding on this day.</p>}
+      {rows.length === 0 && (
+        <p className="muted">Nothing was made ready for funding on this day. Use Ready for funding on the Fund approved page.</p>
+      )}
       {REGIONS.map((region) => {
         const rr = rows.filter((r) => r.region === region)
         if (!rr.length) return null
@@ -369,26 +366,19 @@ function FundingDay({
                     <table>
                       <thead>
                         <tr>
-                          {canPost && <th className="no-print" aria-label="Tick" />}
                           <th>Ref no.</th>
                           <th>Request no.</th>
                           <th className="num">No. of items</th>
                           <th>Items covered</th>
                           <th>Payment date</th>
                           <th className="num">Amount (PHP)</th>
-                          <th className="no-print" aria-label="Actions" />
+                          <th>Stage</th>
+                          <th className="no-print" aria-label="Voucher" />
                         </tr>
                       </thead>
                       <tbody>
                         {tr.map((r) => (
                           <tr key={r.id}>
-                            {canPost && (
-                              <td className="no-print">
-                                {postable(r) && (
-                                  <input type="checkbox" form={POST_QB_FORM} name="ids" value={r.id} aria-label={`Tick ${r.ref}`} />
-                                )}
-                              </td>
-                            )}
                             <td>
                               <Link href={r.href}>{r.ref || 'No Ref no.'}</Link>
                             </td>
@@ -397,30 +387,24 @@ function FundingDay({
                             <td>{r.itemNo ? `Item ${r.itemNo}` : '–'}</td>
                             <td>{r.payDate ? fmtDate(r.payDate) : '–'}</td>
                             <td className="num">{money(r.amount)}</td>
+                            <td className="small muted">{stage(r)}</td>
                             <td className="no-print">
-                              <span className="row-actions">
-                                {postable(r) && (
-                                  <button type="submit" form={POST_QB_FORM} name="one" value={r.id} className="btn small">
-                                    Export to QuickBooks
-                                  </button>
-                                )}
-                                {voucherOk(r) && (
-                                  <Link className="btn secondary small" href={`${r.href}/voucher`}>
-                                    Voucher
-                                  </Link>
-                                )}
-                              </span>
+                              {voucherOk(r) && (
+                                <Link className="btn secondary small" href={`${r.href}/voucher`}>
+                                  Voucher
+                                </Link>
+                              )}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr className="total-row">
-                          <td colSpan={canPost ? 6 : 5} className="num">
+                          <td colSpan={5} className="num">
                             {type} total ({tr.length})
                           </td>
                           <td className="num">{fmtTotals(sumRows(tr))}</td>
-                          <td className="no-print" />
+                          <td colSpan={2} />
                         </tr>
                       </tfoot>
                     </table>
@@ -432,10 +416,35 @@ function FundingDay({
         )
       })}
       {rows.length > 0 && (
-        <p className="req-group-head funding-day-total">
-          <strong>Total for {fmtDate(day)} ({rows.length})</strong>
-          <strong className="req-group-total">{fmtTotals(sumRows(rows))}</strong>
-        </p>
+        <div className="funding-day-total">
+          <div className="req-group-head">
+            <strong>Grand total for {fmtDate(day)} ({rows.length})</strong>
+            <strong className="req-group-total">{fmtTotals(sumRows(rows))}</strong>
+          </div>
+          <div className="row no-print funding-steps">
+            {canAct && toFund.length > 0 && (
+              <ActionForm
+                action={requestAction}
+                hidden={{ op: 'mark_funded', ids: toFund.map((r) => r.id).join(',') }}
+                confirm={`Mark ${toFund.length} request(s) for ${fmtDate(day)} as funded (${fmtTotals(sumRows(toFund))})?`}
+              >
+                <Submit className="btn">Mark as funded · {fmtTotals(sumRows(toFund))}</Submit>
+              </ActionForm>
+            )}
+            {canAct && toImport.length > 0 && (
+              <ActionForm
+                action={requestAction}
+                hidden={{ op: 'import_qb', ids: toImport.map((r) => r.id).join(',') }}
+                confirm={`${QB_CONFIRM} (${toImport.length} request(s))`}
+              >
+                <Submit className="btn">Ready to import to QuickBooks ({toImport.length})</Submit>
+              </ActionForm>
+            )}
+            {toFund.length === 0 && toImport.length === 0 && imported.length > 0 && (
+              <span className="badge good">Funded and imported to QuickBooks</span>
+            )}
+          </div>
+        </div>
       )}
     </section>
   )

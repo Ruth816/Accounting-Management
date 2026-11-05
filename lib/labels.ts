@@ -10,7 +10,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   in_funding_preparation: 'In Funding Preparation',
   pending_fund_approval: 'Pending Fund Approval',
   returned_to_fund_requestor: 'Returned to Fund Requestor',
-  approved_ready_for_qb: 'Approved – Ready for QuickBooks',
+  approved_ready_for_qb: 'Approved',
   approved_posted_to_qb: 'Exported to QuickBooks – Locked',
   sync_failed: 'Sync Failed',
 }
@@ -119,3 +119,17 @@ export const PR_DELETABLE: string[] = [
 // Approved requests are registered and can no longer be deleted (Ruth, 5 November).
 export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
 export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']
+
+// Funding stages after approval (Ruth, 5 November): approved (pre-approved),
+// ready for funding, funded, then exported to QuickBooks.
+type FRStage = { status: Status; ready_for_funding_at?: string | null; funded_at?: string | null }
+export function frStatusLabel(f: FRStage) {
+  if (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') {
+    const base = f.status === 'sync_failed' ? 'Sync Failed · ' : ''
+    if (f.funded_at) return base + 'Funded – Ready for QuickBooks'
+    if (f.ready_for_funding_at) return base + 'Ready for funding'
+  }
+  return STATUS_LABEL[f.status]
+}
+export const canBeMadeReady = (f: FRStage) =>
+  (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
