@@ -370,7 +370,8 @@ function FundingDay({
                       <thead>
                         <tr>
                           {canPost && <th className="no-print" aria-label="Tick" />}
-                          <th>Fund request no.</th>
+                          <th>Ref no.</th>
+                          <th>Request no.</th>
                           <th className="num">No. of items</th>
                           <th>Items covered</th>
                           <th>Payment date</th>
@@ -391,6 +392,7 @@ function FundingDay({
                             <td>
                               <Link href={r.href}>{r.ref || 'No Ref no.'}</Link>
                             </td>
+                            <td>{r.reqNo || '–'}</td>
                             <td className="num">{r.itemCount}</td>
                             <td>{r.itemNo ? `Item ${r.itemNo}` : '–'}</td>
                             <td>{r.payDate ? fmtDate(r.payDate) : '–'}</td>
@@ -414,7 +416,7 @@ function FundingDay({
                       </tbody>
                       <tfoot>
                         <tr className="total-row">
-                          <td colSpan={canPost ? 5 : 4} className="num">
+                          <td colSpan={canPost ? 6 : 5} className="num">
                             {type} total ({tr.length})
                           </td>
                           <td className="num">{fmtTotals(sumRows(tr))}</td>

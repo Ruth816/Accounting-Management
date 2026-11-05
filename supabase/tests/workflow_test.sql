@@ -530,6 +530,7 @@ select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (sele
 select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='fr2'), 'x'), 'cannot be deleted');
 -- QuickBooks imported summary lists it for approvers, not for other roles.
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'admin sees the exported request in the QuickBooks summary');
+select t.eq((select req_no from fr_req_nos(array[(select v from ids where k='fr2')])), (select req_no from payment_requests where id = (select v from ids where k='pr')), 'Ready for funding shows the REQ No. behind a fund request');
 select t.as_user('appr');
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'payment approver sees the exported request');
 select t.as_user('fr');
