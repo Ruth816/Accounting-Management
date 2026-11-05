@@ -135,6 +135,9 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
         </div>
       </div>
 
+      {kind === 'funding' ? (
+        <FundingDay day={day} rows={dayRows} canPost={canPost} postable={postable} postCount={postCount} />
+      ) : (
       <section className="card">
         <h2>{info.verb === 'exported' ? 'Exported' : 'Approved'} on {fmtDate(day)}</h2>
         {canPost && <PostQbForm count={postCount} />}
@@ -226,6 +229,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
           </div>
         )}
       </section>
+      )}
 
       <section className="card">
         <h2>
@@ -314,5 +318,123 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
         </p>
       </section>
     </div>
+  )
+}
+
+const REGIONS = ['NCR', 'VisMin'] as const
+
+// Ready for funding (Ruth, 5 November): the day's requests grouped by region, then by
+// type of request, with only the ref no., items covered, date and amount, and
+// a total for each group and for the day.
+function FundingDay({
+  day,
+  rows,
+  canPost,
+  postable,
+  postCount,
+}: {
+  day: string
+  rows: SummaryRow[]
+  canPost: boolean
+  postable: (r: SummaryRow) => boolean
+  postCount: number
+}) {
+  const voucherOk = (r: SummaryRow) => ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status)
+  return (
+    <section className="card">
+      <div className="req-group-head">
+        <h2>Ready for funding on {fmtDate(day)}</h2>
+        <span className="req-group-total">Total for the day: {fmtTotals(sumRows(rows))}</span>
+      </div>
+      {canPost && <PostQbForm count={postCount} />}
+      {rows.length === 0 && <p className="muted">Nothing was approved for funding on this day.</p>}
+      {REGIONS.map((region) => {
+        const rr = rows.filter((r) => r.region === region)
+        if (!rr.length) return null
+        const types = [...new Set(rr.map((r) => r.type))].sort()
+        return (
+          <div key={region} className="req-group">
+            <div className="req-group-head">
+              <h3 className="region-title">{region}</h3>
+              <span className="req-group-total">
+                {region} total ({rr.length}): {fmtTotals(sumRows(rr))}
+              </span>
+            </div>
+            {types.map((type) => {
+              const tr = rr.filter((r) => r.type === type)
+              return (
+                <div key={type} className="funding-type">
+                  <h4>{type}</h4>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          {canPost && <th className="no-print" aria-label="Tick" />}
+                          <th>Fund request no.</th>
+                          <th className="num">No. of items</th>
+                          <th>Items covered</th>
+                          <th>Payment date</th>
+                          <th className="num">Amount (PHP)</th>
+                          <th className="no-print" aria-label="Actions" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tr.map((r) => (
+                          <tr key={r.id}>
+                            {canPost && (
+                              <td className="no-print">
+                                {postable(r) && (
+                                  <input type="checkbox" form={POST_QB_FORM} name="ids" value={r.id} aria-label={`Tick ${r.ref}`} />
+                                )}
+                              </td>
+                            )}
+                            <td>
+                              <Link href={r.href}>{r.ref || 'No Ref no.'}</Link>
+                            </td>
+                            <td className="num">{r.itemCount}</td>
+                            <td>{r.itemNo ? `Item ${r.itemNo}` : '–'}</td>
+                            <td>{r.payDate ? fmtDate(r.payDate) : '–'}</td>
+                            <td className="num">{money(r.amount)}</td>
+                            <td className="no-print">
+                              <span className="row-actions">
+                                {postable(r) && (
+                                  <button type="submit" form={POST_QB_FORM} name="one" value={r.id} className="btn small">
+                                    Export to QuickBooks
+                                  </button>
+                                )}
+                                {voucherOk(r) && (
+                                  <Link className="btn secondary small" href={`${r.href}/voucher`}>
+                                    Voucher
+                                  </Link>
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="total-row">
+                          <td colSpan={canPost ? 5 : 4} className="num">
+                            {type} total ({tr.length})
+                          </td>
+                          <td className="num">{fmtTotals(sumRows(tr))}</td>
+                          <td className="no-print" />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+      {rows.length > 0 && (
+        <p className="req-group-head funding-day-total">
+          <strong>Total for {fmtDate(day)} ({rows.length})</strong>
+          <strong className="req-group-total">{fmtTotals(sumRows(rows))}</strong>
+        </p>
+      )}
+    </section>
   )
 }

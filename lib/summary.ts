@@ -1,6 +1,6 @@
 import 'server-only'
 import { getDirectory, getMe } from './auth'
-import { frTypeLabel } from './labels'
+import { frRegionOf, frTypeLabel } from './labels'
 import { money } from './calc'
 import type { Status } from './types'
 
@@ -24,6 +24,10 @@ export type SummaryRow = {
   amount: number
   approver: string
   status: Status
+  region: 'NCR' | 'VisMin'
+  itemCount: number
+  itemNo: string // items covered, e.g. "1-3"
+  payDate: string | null
 }
 
 export type Totals = Record<string, number> // per currency
@@ -40,8 +44,8 @@ export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', '
 type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel: string; accountLabel: string; file: string; verb: 'approved' | 'exported' }
 export const KIND_INFO: Record<SummaryKind, KindInfo> = {
   funding: {
-    title: 'Summary list for funding',
-    sub: 'Fund requests approved for funding. Send out funds based on the subtotal for the day.',
+    title: 'Ready for funding',
+    sub: 'Requests approved for funding, with totals per day, region and type of request. Send out funds based on the totals for the day.',
     role: 'fund_approver',
     amountLabel: 'Amount to fund (PHP)',
     accountLabel: 'Payment account',
@@ -117,6 +121,9 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     amount: Number(f.subtotal_to_fund ?? f.amount_php ?? 0),
     approver: name(f.approved_by),
     status: f.status,
+    region: frRegionOf(f as { region: string | null; request_type: number }),
+    ...itemsOf(f),
+    payDate: f.payment_date ?? null,
   })
 
   if (kind === 'funding') {
@@ -144,4 +151,15 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
 // Cheque numbers typed on the items of a Check request, each listed once.
 function chequeList(lines: { cheque_no?: string | null }[] | null | undefined) {
   return [...new Set((lines ?? []).map((l) => l.cheque_no).filter(Boolean))].join(', ')
+}
+
+// How many items a fund request covers, and their numbers ("1-3").
+function itemsOf(f: { lines?: { description?: string }[] | null; description?: string | null; item_no?: string | null }) {
+  let n = (f.lines ?? []).filter((l) => (l.description ?? '').trim()).length
+  if (!n) {
+    const lines = (f.description ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+    n = lines.filter((l) => /^\d+\.\s/.test(l)).length || (lines.length ? 1 : 0)
+  }
+  const itemNo = (f.item_no ?? '').trim() || (n > 1 ? `1-${n}` : n === 1 ? '1' : '')
+  return { itemCount: n, itemNo }
 }

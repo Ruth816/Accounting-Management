@@ -332,3 +332,6 @@ td .badge { white-space: normal; border-radius: 10px; line-height: 1.3; }
   table.stack-mobile .item-list { min-width: 0; }
   table.stack-mobile td > * { justify-self: start; }
 }
+.funding-type { margin-top: 8px; }
+.funding-type h4 { margin: 10px 0 4px; }
+.funding-day-total { border-top: 2px solid var(--border); padding-top: 10px; margin: 8px 0 0; font-size: 1.05rem; }
