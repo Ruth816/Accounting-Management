@@ -44,7 +44,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
         canDelete={(r) => PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))}
         canEdit={(r) =>
           ((r.requestor_id === me.id || is('admin')) && ['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status)) ||
-          (is('admin') && !['cancelled', 'expired'].includes(r.status))
+          (is('admin') && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))
         }
       />
     </div>
@@ -82,7 +82,7 @@ export async function FundRequestList({ title, sub, statuses, base, region }: Li
         rows={rows}
         regions={reg === 'all' ? shown(REGIONS.filter((g) => rows.some((f) => frRegion(f) === g)), limited) : [reg]}
         canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
-        canEdit={(f) => (is('fund_requestor') && !f.locked && FR_OPEN_STATUSES.includes(f.status)) || (is('admin') && FR_APPROVED_STATUSES.includes(f.status))}
+        canEdit={(f) => (is('fund_requestor') && !f.locked && FR_OPEN_STATUSES.includes(f.status)) || (is('admin') && FR_APPROVED_STATUSES.includes(f.status) && f.status !== 'approved_posted_to_qb')}
       />
     </div>
   )

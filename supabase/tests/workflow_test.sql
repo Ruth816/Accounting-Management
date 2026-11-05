@@ -302,6 +302,10 @@ select save_fund_request((select v from ids where k='lfr'), (select to_jsonb(f) 
 select t.eq((select payment_date::text || ' ' || status::text from fund_requests where id = (select v from ids where k='lfr')),
             '2026-11-05 approved_ready_for_qb', 'Admin edits an approved fund request, status stays');
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval'), 2, 'edits after approval are logged');
+select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 2, 'edit log has who and when');
+select mark_posted_to_qb(array[(select v from ids where k='lfr')]);
+select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'Posted to QuickBooks');
+select t.expect_error(format('select save_fund_lines(%L, %L::jsonb)', (select v from ids where k='lfr'), '[]'), 'no longer be edited|Items come from');
 select t.as_user('fr');
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'no longer be edited');
 select t.as_user('adm');

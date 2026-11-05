@@ -1,3 +1,4 @@
+import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
 import { FR_OPEN_STATUSES } from '@/lib/labels'
@@ -42,7 +43,8 @@ export default async function FundRequestPage({
   const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
   const approved = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   // An Admin may correct an approved fund request (Ruth, 5 November); it can't be deleted.
-  const canEditApproved = is('admin') && approved
+  const postedToQb = fr.status === 'approved_posted_to_qb'
+  const canEditApproved = is('admin') && approved && !postedToQb
   const afterApproval = canEditApproved && edit === '1'
   const editable =
     (is('fund_requestor') && !fr.locked && (fr.status === 'in_funding_preparation' || fr.status === 'returned_to_fund_requestor')) ||
@@ -151,6 +153,15 @@ export default async function FundRequestPage({
               <span className="muted small">Approved requests can be corrected but not deleted.</span>
             </div>
           )}
+          {postedToQb && <p className="muted small">Posted to QuickBooks: locked, no more edits or deletion.</p>}
+          {(() => {
+            const last = [...((audit ?? []) as AuditEntry[])].reverse().find((e) => e.action === 'Edited after approval')
+            return last ? (
+              <p className="muted small">
+                Last edited after approval on {fmtDateTime(last.created_at)} by {name(last.actor_id)}.
+              </p>
+            ) : null
+          })()}
           <FRView
             fr={fr}
             chequeNo={cheque?.cheque_no}
