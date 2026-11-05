@@ -99,7 +99,7 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     redirect(`/payment-requests/${savedId}${q}`)
   }
   if (!id) redirect(`/payment-requests/${savedId}${q}`)
-  return done('Draft saved.')
+  return done(fd.get('after_approval') ? 'Changes saved.' : 'Draft saved.')
 }
 
 export async function saveFundRequest(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -156,7 +156,7 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
     }
     return done('Sent for fund approval.')
   }
-  return done('Draft saved.')
+  return done(fd.get('after_approval') ? 'Changes saved.' : 'Draft saved.')
 }
 
 // Funding summary: mark one row (button "one") or the ticked rows as posted to QuickBooks.
