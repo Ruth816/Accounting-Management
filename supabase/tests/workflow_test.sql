@@ -632,5 +632,16 @@ select t.eq((select subtotal_to_fund::text || '|' || memo from fund_requests whe
 select submit_fund_request((select v from ids where k='ck'));
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='ck')), 'pending_fund_approval', 'check with a cheque on every item can be sent');
 
+-- An Admin can approve their own payment request, flagged as self-approved (Ruth, 5 November).
+select t.as_user('adm');
+insert into ids values ('selfpr', save_payment_request(null, ('{
+  "payable_to": "Self Co", "purpose": "Own request", "date_required": "2026-11-05",
+  "items": [{"description": "Fee", "amount": "500"}],
+  "billing_type": "VAT", "wtax_rate": "0", "terms_accepted": true, "approver_id": "' || t.uid('appr') || '"}')::jsonb));
+select submit_payment_request((select v from ids where k='selfpr'));
+select approve_payment_request((select v from ids where k='selfpr'));
+select t.eq((select status::text <> 'pending_payment_approval' from payment_requests where id = (select v from ids where k='selfpr')), true, 'admin approves own request');
+select t.eq((select note from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Approved' order by id desc limit 1) like 'Self-approved%', true, 'own approval is flagged as self-approved');
+
 \o
 \echo ALL TESTS PASSED

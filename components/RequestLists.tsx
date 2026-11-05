@@ -47,7 +47,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
           (is('admin') && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))
         }
         canApprove={(r) =>
-          is('payment_approver') && r.status === 'pending_payment_approval' && r.requestor_id !== me.id && (r.approver_id === me.id || is('admin'))
+          is('payment_approver') && r.status === 'pending_payment_approval' && ((r.requestor_id !== me.id && r.approver_id === me.id) || is('admin'))
         }
       />
     </div>

@@ -130,7 +130,7 @@ export default async function Dashboard() {
             <GroupedPR
               rows={toApprove.data as PaymentRequest[]}
               name={name}
-              canApprove={(r) => r.status === 'pending_payment_approval' && r.requestor_id !== me.id && (r.approver_id === me.id || is('admin'))}
+              canApprove={(r) => r.status === 'pending_payment_approval' && ((r.requestor_id !== me.id && r.approver_id === me.id) || is('admin'))}
             />
           ) : (
             <p className="muted">No requests waiting for approval.</p>
