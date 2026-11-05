@@ -57,7 +57,11 @@ export default async function PaymentRequestPage({
   const mine = pr.requestor_id === me.id
   const openForEdit = pr.status === 'draft' || pr.status === 'returned_to_requestor'
   // An Admin may correct an approved request (Ruth, 5 November); it can't be deleted.
-  const canEditApproved = is('admin') && !openForEdit && !['cancelled', 'expired', 'pending_payment_approval'].includes(pr.status)
+  // Posted to QuickBooks locks it for good.
+  const postedToQb = pr.status === 'approved_posted_to_qb'
+  const canEditApproved =
+    is('admin') && !openForEdit && !postedToQb && !['cancelled', 'expired', 'pending_payment_approval'].includes(pr.status)
+  const lastEdit = [...entries].reverse().find((e) => e.action === 'Edited after approval')
   const afterApproval = canEditApproved && edit === '1'
   const editable = ((mine || is('admin')) && openForEdit) || afterApproval
   const routes = await getRoutes()
@@ -141,6 +145,12 @@ export default async function PaymentRequestPage({
               </Link>
               <span className="muted small">Approved requests can be corrected but not deleted.</span>
             </div>
+          )}
+          {postedToQb && <p className="muted small">Posted to QuickBooks: locked, no more edits or deletion.</p>}
+          {lastEdit && (
+            <p className="muted small">
+              Last edited after approval on {fmtDateTime(lastEdit.created_at)} by {name(lastEdit.actor_id)}.
+            </p>
           )}
           <PRView pr={pr} name={name} />
           <section className="card">
