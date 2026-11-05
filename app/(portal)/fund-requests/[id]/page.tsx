@@ -2,7 +2,7 @@ import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { FR_OPEN_STATUSES, canBeMadeReady } from '@/lib/labels'
+import { FR_OPEN_STATUSES, canBeMadeReady, canSubmitApprove } from '@/lib/labels'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
@@ -91,6 +91,11 @@ export default async function FundRequestPage({
             {is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && canBeMadeReady(fr) && (
               <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: fr.id }} confirm="Put this request on Ready for funding for today?">
                 <Submit className="btn small">Ready for funding</Submit>
+              </ActionForm>
+            )}
+            {canSubmitApprove(fr, is) && (
+              <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It moves to Fund approved.">
+                <Submit className="btn small">Submit &amp; approve</Submit>
               </ActionForm>
             )}
             {is('fund_approver') && fr.funded_at && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (

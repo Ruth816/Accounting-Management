@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP } from '@/lib/labels'
+import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP, canSubmitApprove } from '@/lib/labels'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
 import { todayManila } from '@/lib/summary'
@@ -178,7 +178,7 @@ export default async function Dashboard() {
                 <strong>Check payment request:</strong> {CHECK_PAYMENT_HELP}
               </li>
             </ul>
-            <FRTable rows={frPreparing} empty="Nothing in preparation." />
+            <FRTable rows={frPreparing} empty="Nothing in preparation." canApprove={(f) => canSubmitApprove(f, is)} />
           </Queue>
         </>
       )}

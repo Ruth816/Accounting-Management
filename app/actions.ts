@@ -249,6 +249,12 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
         await call('approve_fund_request', { p_id: id })
         return done('Fund request approved.')
+      case 'submit_approve_fr':
+        // Admin or Fund Approver sending their own request: submit, tick Reviewed and approve in one click (Ruth, 5 November).
+        await call('submit_fund_request', { p_id: id })
+        await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
+        await call('approve_fund_request', { p_id: id })
+        return done('Fund request submitted and approved.')
       case 'approve_fr':
         await call('approve_fund_request', { p_id: id })
         return done('Fund request approved.')
