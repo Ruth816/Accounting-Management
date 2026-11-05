@@ -22,7 +22,7 @@ export function PRTable({
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
     <div className="table-wrap">
-      <table>
+      <table className="stack-mobile">
         <thead>
           <tr>
             <th>REQ No.</th>
@@ -40,25 +40,25 @@ export function PRTable({
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
-              <td>
+              <td data-label="REQ No.">
                 <Link href={`/payment-requests/${r.id}`}>{r.req_no}</Link>
               </td>
-              <td>{prKindLabel(r)}</td>
-              <td>{r.region}</td>
-              <td>{r.payable_to}</td>
-              <td>
+              <td data-label="Type">{prKindLabel(r)}</td>
+              <td data-label="Region">{r.region}</td>
+              <td data-label="Payable to">{r.payable_to}</td>
+              <td data-label="Items">
                 <ItemList items={(r.items ?? []).map((i) => i.description)} />
               </td>
-              <td>{name(r.requestor_id)}</td>
-              <td className="num">
+              <td data-label="Requested by">{name(r.requestor_id)}</td>
+              <td className="num" data-label="Amount due">
                 {r.currency} {money(r.total_due)}
               </td>
-              <td>{fmtDate(r.date_required)}</td>
-              <td>
+              <td data-label="Required">{fmtDate(r.date_required)}</td>
+              <td data-label="Status">
                 <StatusBadge status={r.status} />
               </td>
               {(canDelete || canEdit) && (
-                <td>
+                <td data-label="">
                   <span className="row-actions">
                     {canEdit?.(r) && (
                       <EditButton
@@ -92,7 +92,7 @@ export function FRTable({
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
     <div className="table-wrap">
-      <table>
+      <table className="stack-mobile">
         <thead>
           <tr>
             <th>Ref no.</th>
@@ -109,22 +109,22 @@ export function FRTable({
         <tbody>
           {rows.map((f) => (
             <tr key={f.id}>
-              <td>
+              <td data-label="Ref no.">
                 <Link href={`/fund-requests/${f.id}`}>{f.ref_no || 'No Ref no. yet'}</Link>
               </td>
-              <td>{frTypeLabel(f)}</td>
-              <td>{frRegionOf(f)}</td>
-              <td>{f.payee}</td>
-              <td>
+              <td data-label="Type">{frTypeLabel(f)}</td>
+              <td data-label="Region">{frRegionOf(f)}</td>
+              <td data-label="Payee">{f.payee}</td>
+              <td data-label="Items">
                 <ItemList items={frItems(f)} />
               </td>
-              <td className="num">{f.amount_php === null ? '' : money(f.amount_php)}</td>
-              <td>{fmtDate(f.payment_date)}</td>
-              <td>
+              <td className="num" data-label="Amount (PHP)">{f.amount_php === null ? '' : money(f.amount_php)}</td>
+              <td data-label="Payment date">{fmtDate(f.payment_date)}</td>
+              <td data-label="Status">
                 <StatusBadge status={f.status} />
               </td>
               {(canDelete || canEdit) && (
-                <td>
+                <td data-label="">
                   <span className="row-actions">
                     {canEdit?.(f) && (
                       <EditButton

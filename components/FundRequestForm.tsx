@@ -175,78 +175,80 @@ export function FundRequestForm({
           {manual ? (
             <div className="fund-lines">
               <div className="label">6. Items *</div>
-              <div className={`fund-line head small muted${itemCheques ? ' with-cheque' : ''}`}>
-                <span>No.</span>
-                <span>Customer</span>
-                <span>Description *</span>
-                <span>Amount *</span>
-                <span>Tax *</span>
-                <span>Category *</span>
-                {itemCheques && <span>Cheque no. *</span>}
-                {itemCheques && <span>Cheque amount *</span>}
-                <span />
-              </div>
               {lines.map((l, i) => (
-                <div className={`fund-line${itemCheques ? ' with-cheque' : ''}`} key={l.key}>
-                  <span className="muted">{i + 1}</span>
-                  <input
-                    name="line_customer"
-                    aria-label={`Item ${i + 1} customer`}
-                    placeholder={payee || 'Same as payee'}
-                    value={l.customer}
-                    onChange={(e) => setLine(l.key, { customer: e.target.value })}
-                  />
-                  <input
-                    name="line_description"
-                    aria-label={`Item ${i + 1} description`}
-                    value={l.description}
-                    onChange={(e) => setLine(l.key, { description: e.target.value })}
-                  />
-                  <input
-                    name="line_amount"
-                    aria-label={`Item ${i + 1} amount`}
-                    inputMode="decimal"
-                    className="num"
-                    value={l.amount}
-                    onChange={(e) => setLine(l.key, { amount: e.target.value })}
-                  />
-                  <select
-                    name="line_tax"
-                    aria-label={`Item ${i + 1} tax`}
-                    value={l.tax}
-                    onChange={(e) => setLine(l.key, { tax: e.target.value })}
-                  >
-                    <option value="">Choose</option>
-                    {list('tax_code').map((t) => (
-                      <option key={t.id}>{t.label}</option>
-                    ))}
-                  </select>
-                  <SearchSelect
-                    name="line_category"
-                    options={accountOptions(list('category'))}
-                    defaultValue={l.category}
-                    onChange={(v) => setLine(l.key, { category: v })}
-                  />
-                  {itemCheques && (
-                    <input
-                      name="line_cheque_no"
-                      aria-label={`Item ${i + 1} cheque number`}
-                      value={l.chequeNo}
-                      onChange={(e) => setLine(l.key, { chequeNo: e.target.value })}
-                    />
-                  )}
-                  {itemCheques && (
-                    <input
-                      name="line_cheque_amount"
-                      aria-label={`Item ${i + 1} cheque amount`}
-                      inputMode="decimal"
-                      className="num"
-                      placeholder={l.amount || '0.00'}
-                      title="Same as the item amount unless you type another"
-                      value={l.chequeAmount}
-                      onChange={(e) => setLine(l.key, { chequeAmount: e.target.value })}
-                    />
-                  )}
+                <div className="fund-line" key={l.key}>
+                  <span className="fund-line-no muted">{i + 1}</span>
+                  <div className="fund-fields">
+                    <label className="field wide">
+                      <span className="label">Customer</span>
+                      <input
+                        name="line_customer"
+                        placeholder={payee || 'Same as payee'}
+                        value={l.customer}
+                        onChange={(e) => setLine(l.key, { customer: e.target.value })}
+                      />
+                    </label>
+                    <label className="field wide">
+                      <span className="label">Description *</span>
+                      <input
+                        name="line_description"
+                        value={l.description}
+                        onChange={(e) => setLine(l.key, { description: e.target.value })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="label">Amount *</span>
+                      <input
+                        name="line_amount"
+                        inputMode="decimal"
+                        className="num"
+                        value={l.amount}
+                        onChange={(e) => setLine(l.key, { amount: e.target.value })}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="label">Tax *</span>
+                      <select name="line_tax" value={l.tax} onChange={(e) => setLine(l.key, { tax: e.target.value })}>
+                        <option value="">Choose</option>
+                        {list('tax_code').map((t) => (
+                          <option key={t.id}>{t.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="field wide">
+                      <span className="label">Category *</span>
+                      <SearchSelect
+                        name="line_category"
+                        options={accountOptions(list('category'))}
+                        defaultValue={l.category}
+                        onChange={(v) => setLine(l.key, { category: v })}
+                      />
+                    </div>
+                    {itemCheques && (
+                      <label className="field">
+                        <span className="label">Cheque no. *</span>
+                        <input
+                          name="line_cheque_no"
+                          value={l.chequeNo}
+                          onChange={(e) => setLine(l.key, { chequeNo: e.target.value })}
+                        />
+                      </label>
+                    )}
+                    {itemCheques && (
+                      <label className="field">
+                        <span className="label">Cheque amount *</span>
+                        <input
+                          name="line_cheque_amount"
+                          inputMode="decimal"
+                          className="num"
+                          placeholder={l.amount || '0.00'}
+                          title="Same as the item amount unless you type another"
+                          value={l.chequeAmount}
+                          onChange={(e) => setLine(l.key, { chequeAmount: e.target.value })}
+                        />
+                      </label>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="btn secondary small"
