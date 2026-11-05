@@ -29,24 +29,44 @@ export async function exportSummary(kind: SummaryKind, req: Request) {
   out.push(line(['Approver', access.approver === 'all' ? 'All approvers' : access.name(access.approver)]))
   out.push(line(['Downloaded', new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) + ' by ' + access.me.full_name]))
   out.push('')
-  const amountCols = ['Currency', 'Amount']
-  out.push(
-    line([
-      kind === 'quickbooks' ? 'Exported on' : 'Date', 'Time', 'Ref no.', 'Payee', 'Type',
-      'Payment method', info.accountLabel,
-      'Cheque no.', 'Approved by', ...amountCols, 'Status',
-    ]),
-  )
-  for (const r of rows) {
+  if (kind === 'funding') {
+    // Ready for funding: grouped by day, region and type of request, with totals.
+    out.push(line(['Date approved', 'Region', 'Type of request', 'Fund request no.', 'No. of items', 'Items covered', 'Payment date', 'Amount (PHP)']))
+    const sorted = [...rows].sort((x, y) => x.day.localeCompare(y.day) || x.region.localeCompare(y.region) || x.type.localeCompare(y.type))
+    for (const d of [...new Set(sorted.map((r) => r.day))]) {
+      const dr = sorted.filter((r) => r.day === d)
+      for (const reg of [...new Set(dr.map((r) => r.region))]) {
+        const rr = dr.filter((r) => r.region === reg)
+        for (const ty of [...new Set(rr.map((r) => r.type))]) {
+          const tr = rr.filter((r) => r.type === ty)
+          for (const r of tr) out.push(line([r.day, r.region, r.type, r.ref, r.itemCount, r.itemNo, r.payDate ?? '', r.amount.toFixed(2)]))
+          out.push(line(['', '', `${ty} total`, '', tr.length, '', '', fmtTotals(sumRows(tr))]))
+        }
+        out.push(line(['', `${reg} total`, '', '', rr.length, '', '', fmtTotals(sumRows(rr))]))
+      }
+      out.push(line([`Total for ${d}`, '', '', '', dr.length, '', '', fmtTotals(sumRows(dr))]))
+      out.push('')
+    }
+  } else {
+    const amountCols = ['Currency', 'Amount']
     out.push(
       line([
-        r.day, timeManila(r.approvedAt), r.ref, r.payee, r.type, r.method, r.account,
-        r.cheque, r.approver, r.currency, r.amount.toFixed(2), STATUS_LABEL[r.status],
+        kind === 'quickbooks' ? 'Exported on' : 'Date', 'Time', 'Ref no.', 'Payee', 'Type',
+        'Payment method', info.accountLabel,
+        'Cheque no.', 'Approved by', ...amountCols, 'Status',
       ]),
     )
-  }
-  out.push('')
+    for (const r of rows) {
+      out.push(
+        line([
+          r.day, timeManila(r.approvedAt), r.ref, r.payee, r.type, r.method, r.account,
+          r.cheque, r.approver, r.currency, r.amount.toFixed(2), STATUS_LABEL[r.status],
+        ]),
+      )
+    }
+    out.push('')
 
+  }
   const group = (key: (d: string) => string, label: (k: string) => string, title: string) => {
     const keys = [...new Set(rows.map((r) => key(r.day)))].sort()
     out.push(line([title, 'Requests', 'Total']))
