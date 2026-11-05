@@ -22,8 +22,8 @@ export default async function Dashboard() {
       : null,
     is('payment_approver')
       ? (is('admin')
-          ? supabase.from('payment_requests').select('*').neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
-          : supabase.from('payment_requests').select('*').eq('approver_id', me.id).neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on'))
+          ? supabase.from('payment_requests').select('*').eq('status', 'pending_payment_approval').order('submitted_on')
+          : supabase.from('payment_requests').select('*').or(`approver_id.eq.${me.id},requestor_id.eq.${me.id}`).eq('status', 'pending_payment_approval').order('submitted_on'))
       : null,
     is('fund_requestor')
       ? supabase.from('payment_requests').select('*').eq('status', 'approved_awaiting_funding').order('approved_on')
@@ -34,7 +34,7 @@ export default async function Dashboard() {
     is('fund_approver')
       ? (is('admin')
           ? supabase.from('fund_requests').select('*').eq('status', 'pending_fund_approval').order('submitted_on')
-          : supabase.from('fund_requests').select('*').eq('fund_approver_id', me.id).eq('status', 'pending_fund_approval').order('submitted_on'))
+          : supabase.from('fund_requests').select('*').or(`fund_approver_id.eq.${me.id},fund_requestor_id.eq.${me.id}`).eq('status', 'pending_fund_approval').order('submitted_on'))
       : null,
     is('admin')
       ? supabase.from('payment_requests').select('*').not('status', 'in', '(draft,cancelled)').order('updated_at', { ascending: false }).limit(20)
@@ -130,7 +130,7 @@ export default async function Dashboard() {
             <GroupedPR
               rows={toApprove.data as PaymentRequest[]}
               name={name}
-              canApprove={(r) => r.status === 'pending_payment_approval' && ((r.requestor_id !== me.id && r.approver_id === me.id) || is('admin'))}
+              canApprove={(r) => r.status === 'pending_payment_approval' && (r.approver_id === me.id || r.requestor_id === me.id || is('admin'))}
             />
           ) : (
             <p className="muted">No requests waiting for approval.</p>
@@ -143,7 +143,7 @@ export default async function Dashboard() {
           {toFundApprove?.data?.length ? (
             <GroupedFR
               rows={toFundApprove.data as FundRequest[]}
-              canApprove={(f) => f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || is('admin'))}
+              canApprove={(f) => f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || f.fund_requestor_id === me.id || is('admin'))}
             />
           ) : (
             <p className="muted">No fund requests waiting for you.</p>

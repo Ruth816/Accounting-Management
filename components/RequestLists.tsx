@@ -47,7 +47,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
           (is('admin') && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))
         }
         canApprove={(r) =>
-          is('payment_approver') && r.status === 'pending_payment_approval' && ((r.requestor_id !== me.id && r.approver_id === me.id) || is('admin'))
+          is('payment_approver') && r.status === 'pending_payment_approval' && (r.approver_id === me.id || r.requestor_id === me.id || is('admin'))
         }
       />
     </div>
@@ -86,7 +86,7 @@ export async function FundRequestList({ title, sub, statuses, base, region }: Li
         regions={reg === 'all' ? shown(REGIONS.filter((g) => rows.some((f) => frRegion(f) === g)), limited) : [reg]}
         canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
         canEdit={(f) => (is('fund_requestor') && !f.locked && FR_OPEN_STATUSES.includes(f.status)) || (is('admin') && FR_APPROVED_STATUSES.includes(f.status) && f.status !== 'approved_posted_to_qb')}
-        canApprove={(f) => is('fund_approver') && f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || is('admin'))}
+        canApprove={(f) => is('fund_approver') && f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || f.fund_requestor_id === me.id || is('admin'))}
         canMarkReady={(f) => is('fund_approver') && (f.fund_approver_id === me.id || is('admin')) && canBeMadeReady(f)}
       />
     </div>

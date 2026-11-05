@@ -69,7 +69,7 @@ export default async function PaymentRequestPage({
   const hint = await routeHint(routes)
   // With a route for the region, only that step's approver or an Admin decides.
   const canApprove =
-    is('payment_approver') && (!mine || is('admin')) && pr.status === 'pending_payment_approval' && (!routed || pr.approver_id === me.id || is('admin'))
+    is('payment_approver') && pr.status === 'pending_payment_approval' && (!routed || mine || pr.approver_id === me.id || is('admin'))
   const canReceive = is('fund_requestor') && pr.status === 'approved_awaiting_funding'
   const funded = fr && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   const canLiquidate = (mine || is('admin')) && pr.payment_type === 'Cash' && funded && !pr.liquidated_on
