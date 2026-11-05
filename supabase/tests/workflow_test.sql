@@ -279,7 +279,7 @@ select approve_payment_request((select v from ids where k='dpr'));
 select t.as_user('fr');
 insert into ids values ('dfr', t.fr_of((select v from ids where k='dpr')));
 select t.as_user('req');
-select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Delete its fund request first');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'cannot be deleted');
 select t.as_user('fa');
 select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='dfr'), 'x'), 'Fund Requestor or an Admin');
 select t.as_user('fr');
@@ -290,8 +290,12 @@ select t.eq((select status::text from fund_requests where id = (select v from id
 select t.eq((select status::text || ' ' || coalesce(fund_request_id::text, 'none') from payment_requests where id = (select v from ids where k='dpr')),
             'approved_awaiting_funding none', 'its payment request waits for funding again');
 select t.as_user('adm');
-select delete_payment_request((select v from ids where k='dpr'), 'Doubled');
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='dpr')), 'cancelled', 'Admin deletes a payment request');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'already registered');
+insert into ids values ('dpr2', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Doubled entry', 'purpose', 'P', 'date_required', '2026-11-05',
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 10)))));
+select delete_payment_request((select v from ids where k='dpr2'), 'Doubled');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='dpr2')), 'cancelled', 'Admin deletes a payment request before approval');
 select t.eq((select count(*)::int from audit_log where action = 'Deleted' and note in ('Doubled', 'Encoded wrongly')), 2, 'deletes stay in the audit log');
 select t.as_user('fr');
 insert into ids values ('dcp', create_check_payment_request());
