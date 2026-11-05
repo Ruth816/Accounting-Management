@@ -23,7 +23,7 @@ export default async function Dashboard() {
     is('payment_approver')
       ? (is('admin')
           ? supabase.from('payment_requests').select('*').eq('status', 'pending_payment_approval').order('submitted_on')
-          : supabase.from('payment_requests').select('*').or(`approver_id.eq.${me.id},requestor_id.eq.${me.id}`).eq('status', 'pending_payment_approval').order('submitted_on'))
+          : supabase.from('payment_requests').select('*').eq('approver_id', me.id).neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on'))
       : null,
     is('fund_requestor')
       ? supabase.from('payment_requests').select('*').eq('status', 'approved_awaiting_funding').order('approved_on')
@@ -130,7 +130,7 @@ export default async function Dashboard() {
             <GroupedPR
               rows={toApprove.data as PaymentRequest[]}
               name={name}
-              canApprove={(r) => r.status === 'pending_payment_approval' && (r.approver_id === me.id || r.requestor_id === me.id || is('admin'))}
+              canApprove={(r) => r.status === 'pending_payment_approval' && ((r.approver_id === me.id && r.requestor_id !== me.id) || is('admin'))}
             />
           ) : (
             <p className="muted">No requests waiting for approval.</p>

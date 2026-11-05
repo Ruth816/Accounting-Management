@@ -41,7 +41,7 @@ insert into auth.users (id, email, raw_user_meta_data) values
   (gen_random_uuid(), 'fa@x.test', '{"full_name":"Fred Fundappr"}'),
   (gen_random_uuid(), 'adm@x.test', '{"full_name":"Ada Admin"}');
 update profiles set roles = '{payment_requestor}' where email in ('req@x.test', 'req2@x.test');
-update profiles set roles = '{payment_requestor,payment_approver}' where email = 'appr@x.test';
+update profiles set roles = '{payment_approver}' where email = 'appr@x.test';
 update profiles set roles = '{fund_requestor}', default_fund_approver = t.uid('fa'), mobile_no = '639171234567' where email = 'fr@x.test';
 update profiles set roles = '{fund_approver}' where email = 'fa@x.test';
 update profiles set roles = '{admin}' where email = 'adm@x.test';
@@ -643,15 +643,10 @@ select approve_payment_request((select v from ids where k='selfpr'));
 select t.eq((select status::text <> 'pending_payment_approval' from payment_requests where id = (select v from ids where k='selfpr')), true, 'admin approves own request');
 select t.eq((select note from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Approved' order by id desc limit 1) like 'Self-approved%', true, 'own approval is flagged as self-approved');
 
--- A Payment Approver can approve their own request too (Ruth, 5 November).
-select t.as_user('appr');
-insert into ids values ('selfpr2', save_payment_request(null, ('{
-  "payable_to": "Self Co", "purpose": "Approver own request", "date_required": "2026-11-05",
-  "items": [{"description": "Fee", "amount": "300"}],
-  "billing_type": "VAT", "wtax_rate": "0", "terms_accepted": true, "approver_id": "' || t.uid('appr2') || '"}')::jsonb));
-select submit_payment_request((select v from ids where k='selfpr2'));
-select approve_payment_request((select v from ids where k='selfpr2'));
-select t.eq((select note from audit_log where payment_request_id = (select v from ids where k='selfpr2') and action like 'Approved%' order by id desc limit 1) like 'Self-approved%', true, 'an approver approves their own request, flagged');
+-- A Payment Approver cannot approve their own request, nor be a Payment Requestor too.
+reset role;
+select t.expect_error(format('update profiles set roles = %L where id = %L', '{payment_requestor,payment_approver}', t.uid('appr2')), 'cannot also be a Payment Requestor');
+set role authenticated;
 
 \o
 \echo ALL TESTS PASSED
