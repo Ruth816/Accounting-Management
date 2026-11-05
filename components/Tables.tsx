@@ -158,13 +158,11 @@ function frItems(f: FundRequest): string[] {
 function ItemList({ items }: { items: string[] }) {
   const shown = items.map((i) => i.trim()).filter(Boolean)
   if (!shown.length) return <span className="muted">–</span>
-  const max = 3
   return (
-    <ul className="item-list" title={shown.join('\n')}>
-      {shown.slice(0, max).map((d, i) => (
+    <ul className="item-list">
+      {shown.map((d, i) => (
         <li key={i}>{d}</li>
       ))}
-      {shown.length > max && <li className="muted">+{shown.length - max} more</li>}
     </ul>
   )
 }

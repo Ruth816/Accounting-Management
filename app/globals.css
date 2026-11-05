@@ -77,7 +77,7 @@ h3 { font-size: 0.95rem; margin: 16px 0 8px; }
 .main { flex: 1; min-width: 0; }
 .signed-in {
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;
-  max-width: 1080px; margin: 0 auto; padding: 18px 16px 14px; color: var(--muted); border-bottom: 1px solid var(--border);
+  max-width: 1440px; margin: 0 auto; padding: 18px 16px 14px; color: var(--muted); border-bottom: 1px solid var(--border);
 }
 .signed-in strong { color: var(--text); }
 .signed-in-actions { display: flex; gap: 16px; align-items: center; }
@@ -95,7 +95,7 @@ h3 { font-size: 0.95rem; margin: 16px 0 8px; }
   background: var(--accent); color: var(--accent-text); font-size: 0.75rem; text-align: center;
 }
 
-.page { max-width: 1080px; margin: 0 auto; padding: 16px; }
+.page { max-width: 1440px; margin: 0 auto; padding: 16px; }
 .page-title { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 4px; }
 .page-sub { color: var(--muted); margin: 0; font-size: 1.05rem; }
 .group-title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 12px; }
@@ -168,7 +168,7 @@ input[type='checkbox'], input[type='radio'] { width: auto; }
 
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-size: 0.78rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
 th.num, td.num { text-align: right; white-space: nowrap; }
 
@@ -227,6 +227,7 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 
 .row-actions { display: inline-flex; gap: 6px; }
 .back-btn { align-self: flex-start; }
+.page > .back-btn { margin-bottom: 12px; }
 
 /* NCR / VisMin tabs and type groups */
 .region-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -275,9 +276,9 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .search-options li.active { background: rgba(79, 70, 229, 0.25); }
 .search-options li[aria-selected=true] { font-weight: 600; }
 
-.fund-lines { display: grid; gap: 8px; margin-top: 12px; }
-.fund-line { display: grid; grid-template-columns: 28px minmax(0, 1.3fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; }
-.fund-line.with-cheque { grid-template-columns: 28px minmax(0, 1.2fr) minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+.fund-lines { display: grid; gap: 8px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+.fund-line { display: grid; grid-template-columns: 28px minmax(150px, 1.3fr) minmax(220px, 2fr) minmax(120px, 1fr) minmax(140px, 1.3fr) minmax(200px, 2fr) auto; gap: 8px; align-items: center; }
+.fund-line.with-cheque { grid-template-columns: 28px minmax(150px, 1.2fr) minmax(220px, 1.8fr) minmax(120px, 1fr) minmax(140px, 1.2fr) minmax(200px, 1.8fr) minmax(120px, 1fr) minmax(130px, 1fr) auto; }
 @media (max-width: 720px) {
   .fund-line, .fund-line.with-cheque { grid-template-columns: 24px 1fr; }
   .fund-line.head { display: none; }
@@ -287,7 +288,16 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .region-users > summary { cursor: pointer; list-style: revert; }
 .region-users > summary h3 { display: inline; }
 .region-users h4 { margin: 14px 0 6px; }
-.item-list { margin: 0; padding-left: 1.1em; min-width: 160px; max-width: 320px; }
-.item-list li { overflow-wrap: anywhere; }
+.item-list { margin: 0; padding-left: 1.1em; min-width: 160px; }
+.item-list li { overflow-wrap: break-word; }
 .status-actions { gap: 8px; align-items: center; margin-top: 4px; }
 .status-actions form { display: inline; }
+
+/* Let table text wrap instead of being cut off; keep columns readable. */
+td { overflow-wrap: break-word; min-width: 5em; }
+td:has(> input[type='checkbox']), td.num { min-width: 0; }
+td:first-child { white-space: nowrap; }
+td .badge { white-space: normal; border-radius: 10px; line-height: 1.3; }
+.row-actions { flex-wrap: wrap; }
+.page-head > div { min-width: 0; }
+.page-head h1 { overflow-wrap: anywhere; }
