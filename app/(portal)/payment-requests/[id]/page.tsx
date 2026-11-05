@@ -97,7 +97,7 @@ export default async function PaymentRequestPage({
         </div>
         {fr && (
           <Link href={`/fund-requests/${fr.id}`} className="btn secondary small">
-            Open fund request
+            Complete details for fund request
           </Link>
         )}
       </div>
