@@ -3,7 +3,7 @@ import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP, canSubmitApprove } from '@/lib/lab
 import { getDirectory, getMe } from '@/lib/auth'
 import { FRTable, PRTable } from '@/components/Tables'
 import { todayManila } from '@/lib/summary'
-import { GroupedFR, GroupedPR } from '@/components/Grouped'
+import { SummaryFR, SummaryPR } from '@/components/Grouped'
 import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
@@ -127,11 +127,7 @@ export default async function Dashboard() {
       {is('payment_approver') && (
         <Queue id="approve-pr" title="Waiting for payment approval" count={toApprove?.data?.length}>
           {toApprove?.data?.length ? (
-            <GroupedPR
-              rows={toApprove.data as PaymentRequest[]}
-              name={name}
-              canApprove={(r) => r.status === 'pending_payment_approval' && ((r.approver_id === me.id && r.requestor_id !== me.id) || is('admin'))}
-            />
+            <SummaryPR rows={toApprove.data as PaymentRequest[]} base="/payment-requests" />
           ) : (
             <p className="muted">No requests waiting for approval.</p>
           )}
@@ -141,10 +137,7 @@ export default async function Dashboard() {
       {is('fund_approver') && (
         <Queue id="approve-fr" title="Fund requests waiting for your approval" count={toFundApprove?.data?.length}>
           {toFundApprove?.data?.length ? (
-            <GroupedFR
-              rows={toFundApprove.data as FundRequest[]}
-              canApprove={(f) => f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || f.fund_requestor_id === me.id || is('admin'))}
-            />
+            <SummaryFR rows={toFundApprove.data as FundRequest[]} base="/fund-requests" />
           ) : (
             <p className="muted">No fund requests waiting for you.</p>
           )}
@@ -154,7 +147,11 @@ export default async function Dashboard() {
       {is('fund_requestor') && (
         <>
           <Queue id="receive" title="Approved, ready to receive for funding" count={toReceive?.data?.length}>
-            <PRTable rows={(toReceive?.data ?? []) as PaymentRequest[]} name={name} empty="No approved requests waiting." />
+            {toReceive?.data?.length ? (
+              <SummaryPR rows={toReceive.data as PaymentRequest[]} base="/payment-requests/approved" />
+            ) : (
+              <p className="muted">No approved requests waiting.</p>
+            )}
           </Queue>
           <Queue
             id="preparing"
