@@ -528,6 +528,13 @@ select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (sel
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='fr2'), '{}'), 'Posted to QuickBooks');
 select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='pr'), '{}'), 'Posted to QuickBooks');
 select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='fr2'), 'x'), 'cannot be deleted');
+-- QuickBooks imported summary lists it for approvers, not for other roles.
+select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'admin sees the exported request in the QuickBooks summary');
+select t.as_user('appr');
+select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'payment approver sees the exported request');
+select t.as_user('fr');
+select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day'))::int, 0, 'a fund requestor sees nothing in the QuickBooks summary');
+select t.as_user('adm');
 
 -- The next REQ No. shown on the form is the one the next save takes.
 select t.as_user('req');

@@ -51,7 +51,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
 
   // Days of the selected month that have approvals.
   const days = [...new Set(monthRows.map((r) => r.day))].sort()
-  const showCheque = kind === 'funding'
+  const showCheque = true
   const canPost = kind === 'funding' && access.canPost
   const postable = (r: SummaryRow) => canPost && (r.status === 'approved_ready_for_qb' || r.status === 'sync_failed')
   const postCount = dayRows.filter(postable).length
@@ -121,7 +121,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
         </div>
         <div className="stat-card">
           <div className="stat-value">{dayRows.length}</div>
-          <div className="stat-label">Requests approved that day</div>
+          <div className="stat-label">Requests {info.verb} that day</div>
         </div>
         <div className="stat-card progress">
           <div className="stat-value">{fmtTotals(sumRows(monthRows))}</div>
@@ -136,10 +136,10 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
       </div>
 
       <section className="card">
-        <h2>Approved on {fmtDate(day)}</h2>
+        <h2>{info.verb === 'exported' ? 'Exported' : 'Approved'} on {fmtDate(day)}</h2>
         {canPost && <PostQbForm count={postCount} />}
         {dayRows.length === 0 ? (
-          <p className="muted">Nothing was approved on this day.</p>
+          <p className="muted">Nothing was {info.verb} on this day.</p>
         ) : (
           <div className="table-wrap">
             <table>
@@ -147,10 +147,10 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                 <tr>
                   <th>{canPost ? '' : '#'}</th>
                   <th>Time</th>
-                  <th>{kind === 'funding' ? 'Ref no.' : 'REQ No.'}</th>
-                  <th>{kind === 'funding' ? 'Payee' : 'Payable to'}</th>
+                  <th>Ref no.</th>
+                  <th>Payee</th>
                   <th>Type</th>
-                  <th>{kind === 'funding' ? 'Payment method' : 'Payment type'}</th>
+                  <th>Payment method</th>
                   <th>{info.accountLabel}</th>
                   {showCheque && <th>Cheque no.</th>}
                   {access.approver === 'all' && <th>Approved by</th>}
@@ -180,7 +180,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                     {showCheque && <td>{r.cheque}</td>}
                     {access.approver === 'all' && <td>{r.approver}</td>}
                     <td className="num">
-                      {r.currency === 'PHP' && kind === 'funding' ? '' : r.currency + ' '}
+                      {r.currency === 'PHP' ? '' : r.currency + ' '}
                       {money(r.amount)}
                     </td>
                     <td>
@@ -192,7 +192,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                           Export to QuickBooks
                         </button>
                       )}
-                      {kind === 'funding' && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status) && (
+                      {['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status) && (
                         <Link className="btn secondary small" href={`${r.href}/voucher`}>
                           Voucher
                         </Link>
@@ -232,7 +232,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
           Per day, {MONTHS[Number(month.slice(5)) - 1]} {year}
         </h2>
         {days.length === 0 ? (
-          <p className="muted">Nothing approved this month.</p>
+          <p className="muted">Nothing {info.verb} this month.</p>
         ) : (
           <div className="table-wrap">
             <table>

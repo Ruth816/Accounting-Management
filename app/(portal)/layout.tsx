@@ -41,9 +41,7 @@ export default async function PortalLayout({ children }: { children: React.React
               ...(is('fund_approver') || is('admin')
                 ? [{ href: '/summary/funding', label: 'Summary list for funding', icon: 'summary' as const }]
                 : []),
-              ...(is('payment_approver') || is('admin')
-                ? [{ href: '/summary/payments', label: 'Approved payments summary', icon: 'summary' as const }]
-                : []),
+              { href: '/summary/quickbooks', label: 'QuickBooks imported summary', icon: 'summary' as const },
             ],
           },
         ]

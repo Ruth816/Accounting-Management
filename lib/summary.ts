@@ -1,13 +1,13 @@
 import 'server-only'
 import { getDirectory, getMe } from './auth'
-import { frTypeLabel, prKindLabel } from './labels'
+import { frTypeLabel } from './labels'
 import { money } from './calc'
 import type { Status } from './types'
 
 // Approval summaries (Ruth, 1 November): what an approver approved per day,
 // per month and over a calendar year, in Philippine time.
 
-export type SummaryKind = 'funding' | 'payments'
+export type SummaryKind = 'funding' | 'quickbooks'
 
 export type SummaryRow = {
   id: string
@@ -37,7 +37,8 @@ export const timeManila = (iso: string) =>
 
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-export const KIND_INFO: Record<SummaryKind, { title: string; sub: string; role: 'fund_approver' | 'payment_approver'; amountLabel: string; accountLabel: string; file: string }> = {
+type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel: string; accountLabel: string; file: string; verb: 'approved' | 'exported' }
+export const KIND_INFO: Record<SummaryKind, KindInfo> = {
   funding: {
     title: 'Summary list for funding',
     sub: 'Fund requests approved for funding. Send out funds based on the subtotal for the day.',
@@ -45,14 +46,18 @@ export const KIND_INFO: Record<SummaryKind, { title: string; sub: string; role: 
     amountLabel: 'Amount to fund (PHP)',
     accountLabel: 'Payment account',
     file: 'funding-summary',
+    verb: 'approved',
   },
-  payments: {
-    title: 'Summary of approved payments',
-    sub: 'Payment requests approved, per day, per month and for the year.',
-    role: 'payment_approver',
-    amountLabel: 'Amount due',
-    accountLabel: 'Requested by',
-    file: 'payment-approval-summary',
+  // Replaces the approved payments summary (Ruth, 5 November): approved fund
+  // requests already exported to QuickBooks, by the day they were exported.
+  quickbooks: {
+    title: 'QuickBooks imported summary',
+    sub: 'Approved fund requests already exported to QuickBooks and locked, per day, per month and for the year.',
+    role: 'fund_approver',
+    amountLabel: 'Amount funded (PHP)',
+    accountLabel: 'Payment account',
+    file: 'quickbooks-imported-summary',
+    verb: 'exported',
   },
 }
 
@@ -77,10 +82,10 @@ export function fmtTotals(t: Totals) {
 export async function summaryAccess(kind: SummaryKind, approverParam?: string) {
   const { me, is } = await getMe()
   const role = KIND_INFO[kind].role
-  const allowed = is(role) || is('admin')
-  // Payment Approvers see every approver's approvals (Ruth, 1 November);
+  const allowed = is(role) || is('admin') || (kind === 'quickbooks' && is('payment_approver'))
+  // Everyone on the QuickBooks summary sees every approver's requests;
   // Admins can pick on both pages. isAdmin here means "may pick an approver".
-  const isAdmin = is('admin') || (kind === 'payments' && is(role))
+  const isAdmin = is('admin') || (kind === 'quickbooks' && allowed)
   let approver: string | 'all' = is(role) && kind === 'funding' ? me.id : 'all'
   if (isAdmin && approverParam === 'all') approver = 'all'
   else if (isAdmin && approverParam && /^[0-9a-f-]{36}$/i.test(approverParam)) approver = approverParam
@@ -96,6 +101,24 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
   const from = `${year}-01-01T00:00:00+08:00`
   const to = `${year + 1}-01-01T00:00:00+08:00`
 
+  type FR = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+  const toRow = (f: FR, at: string): SummaryRow => ({
+    id: f.id,
+    href: `/fund-requests/${f.id}`,
+    approvedAt: at,
+    day: manilaDay(at),
+    ref: f.ref_no ?? '',
+    payee: f.payee ?? '',
+    type: frTypeLabel(f as { request_type: number; payment_request_id: string | null }),
+    method: f.payment_method ?? '',
+    account: f.payment_account ?? '',
+    cheque: f.cheques?.cheque_no ?? chequeList(f.lines),
+    currency: 'PHP',
+    amount: Number(f.subtotal_to_fund ?? f.amount_php ?? 0),
+    approver: name(f.approved_by),
+    status: f.status,
+  })
+
   if (kind === 'funding') {
     let q = supabase
       .from('fund_requests')
@@ -108,51 +131,14 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
       .limit(10000)
     if (approver !== 'all') q = q.eq('approved_by', approver)
     const { data } = await q
-    return (data ?? []).map((f) => ({
-      id: f.id,
-      href: `/fund-requests/${f.id}`,
-      approvedAt: f.approved_on,
-      day: manilaDay(f.approved_on),
-      ref: f.ref_no ?? '',
-      payee: f.payee ?? '',
-      type: frTypeLabel(f),
-      method: f.payment_method ?? '',
-      account: f.payment_account ?? '',
-      cheque: f.cheques?.cheque_no ?? chequeList(f.lines),
-      currency: 'PHP',
-      amount: Number(f.subtotal_to_fund ?? f.amount_php ?? 0),
-      approver: name(f.approved_by),
-      status: f.status,
-    }))
+    return (data ?? []).map((f) => toRow(f, f.approved_on))
   }
 
-  let q = supabase
-    .from('payment_requests')
-    .select('*')
-    .not('approved_on', 'is', null)
-    .not('status', 'in', '(cancelled,draft,pending_payment_approval,returned_to_requestor,expired)')
-    .gte('approved_on', from)
-    .lt('approved_on', to)
-    .order('approved_on')
-    .limit(10000)
-  if (approver !== 'all') q = q.eq('approver_id', approver)
-  const { data } = await q
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    href: `/payment-requests/${r.id}`,
-    approvedAt: r.approved_on,
-    day: manilaDay(r.approved_on),
-    ref: r.req_no,
-    payee: r.payable_to ?? '',
-    type: prKindLabel(r),
-    method: r.payment_type ?? '',
-    account: name(r.requestor_id),
-    cheque: '',
-    currency: r.currency ?? 'PHP',
-    amount: Number(r.total_due ?? 0),
-    approver: name(r.approver_id),
-    status: r.status,
-  }))
+  // QuickBooks: locked fund requests, dated by when they were exported.
+  const { data } = await supabase.rpc('qb_imported_summary', { p_from: from, p_to: to })
+  return ((data ?? []) as FR[])
+    .filter((f) => approver === 'all' || f.approved_by === approver)
+    .map((f) => toRow({ ...f, cheques: f.cheque_no ? { cheque_no: f.cheque_no } : null }, f.exported_at))
 }
 
 // Cheque numbers typed on the items of a Check request, each listed once.
