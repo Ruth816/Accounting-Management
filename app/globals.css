@@ -289,3 +289,5 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .region-users h4 { margin: 14px 0 6px; }
 .item-list { margin: 0; padding-left: 1.1em; min-width: 160px; max-width: 320px; }
 .item-list li { overflow-wrap: anywhere; }
+.status-actions { gap: 8px; align-items: center; margin-top: 4px; }
+.status-actions form { display: inline; }
