@@ -327,14 +327,11 @@ const REGIONS = ['NCR', 'VisMin'] as const
 
 // Ready for funding (Ruth, 5 November): the day's requests grouped by region, then by
 // type of request, with only the ref no., items covered, date and amount, and
-// a total for each group and for the day. The day total carries the next step:
-// Mark as funded, then Ready to import to QuickBooks.
+// a total for each group and for the day. Each region's total carries the next
+// step, per region (Ruth, 5 November): Mark as funded, then Ready to import to QuickBooks.
 function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; canAct: boolean }) {
   const voucherOk = (r: SummaryRow) => ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status)
   const open = (r: SummaryRow) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed'
-  const toFund = rows.filter((r) => open(r) && !r.funded)
-  const toImport = rows.filter((r) => open(r) && r.funded)
-  const imported = rows.filter((r) => r.status === 'approved_posted_to_qb')
   const stage = (r: SummaryRow) => (r.status === 'approved_posted_to_qb' ? 'Imported to QuickBooks' : r.funded ? 'Funded' : 'Not yet funded')
   return (
     <section className="card">
@@ -412,6 +409,7 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
                 </div>
               )
             })}
+            <RegionSteps region={region} day={day} rows={rr} canAct={canAct} />
           </div>
         )
       })}
@@ -421,31 +419,44 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
             <strong>Grand total for {fmtDate(day)} ({rows.length})</strong>
             <strong className="req-group-total">{fmtTotals(sumRows(rows))}</strong>
           </div>
-          <div className="row no-print funding-steps">
-            {canAct && toFund.length > 0 && (
-              <ActionForm
-                action={requestAction}
-                hidden={{ op: 'mark_funded', ids: toFund.map((r) => r.id).join(',') }}
-                confirm={`Mark ${toFund.length} request(s) for ${fmtDate(day)} as funded (${fmtTotals(sumRows(toFund))})?`}
-              >
-                <Submit className="btn">Mark as funded · {fmtTotals(sumRows(toFund))}</Submit>
-              </ActionForm>
-            )}
-            {canAct && toImport.length > 0 && (
-              <ActionForm
-                action={requestAction}
-                hidden={{ op: 'import_qb', ids: toImport.map((r) => r.id).join(',') }}
-                confirm={`${QB_CONFIRM} (${toImport.length} request(s))`}
-              >
-                <Submit className="btn">Ready to import to QuickBooks ({toImport.length})</Submit>
-              </ActionForm>
-            )}
-            {toFund.length === 0 && toImport.length === 0 && imported.length > 0 && (
-              <span className="badge good">Funded and imported to QuickBooks</span>
-            )}
-          </div>
         </div>
       )}
     </section>
+  )
+}
+
+function RegionSteps({ region, day, rows, canAct }: { region: string; day: string; rows: SummaryRow[]; canAct: boolean }) {
+  const open = (r: SummaryRow) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed'
+  const toFund = rows.filter((r) => open(r) && !r.funded)
+  const toImport = rows.filter((r) => open(r) && r.funded)
+  const imported = rows.filter((r) => r.status === 'approved_posted_to_qb')
+  return (
+    <div className="row no-print funding-steps">
+      {canAct && toFund.length > 0 && (
+        <ActionForm
+          action={requestAction}
+          hidden={{ op: 'mark_funded', ids: toFund.map((r) => r.id).join(',') }}
+          confirm={`Mark ${toFund.length} ${region} request(s) for ${fmtDate(day)} as funded (${fmtTotals(sumRows(toFund))})?`}
+        >
+          <Submit className="btn">
+            Mark {region} as funded · {fmtTotals(sumRows(toFund))}
+          </Submit>
+        </ActionForm>
+      )}
+      {canAct && toImport.length > 0 && (
+        <ActionForm
+          action={requestAction}
+          hidden={{ op: 'import_qb', ids: toImport.map((r) => r.id).join(',') }}
+          confirm={`${QB_CONFIRM} (${toImport.length} ${region} request(s))`}
+        >
+          <Submit className="btn">
+            Ready to import {region} to QuickBooks ({toImport.length})
+          </Submit>
+        </ActionForm>
+      )}
+      {toFund.length === 0 && toImport.length === 0 && imported.length > 0 && (
+        <span className="badge good">{region} funded and imported to QuickBooks</span>
+      )}
+    </div>
   )
 }
