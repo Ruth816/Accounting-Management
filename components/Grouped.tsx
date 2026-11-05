@@ -138,3 +138,63 @@ export function GroupedFR({
     </>
   )
 }
+
+// Dashboard queues: count and total per region and type, each linking to the
+// page that lists the requests in full (Ruth, 5 November).
+function QueueSummary({ lines, base }: { lines: { region: Region; kind: Kind; count: number; total: string }[]; base: string }) {
+  const shown = lines.filter((l) => l.count > 0)
+  if (!shown.length) return null
+  return (
+    <div className="table-wrap">
+      <table className="stack-mobile">
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th>Type</th>
+            <th className="num">No.</th>
+            <th className="num">Total</th>
+            <th aria-label="Open" />
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((l) => (
+            <tr key={`${l.region}-${l.kind}`}>
+              <td data-label="Region">{l.region}</td>
+              <td data-label="Type">{KIND_LABEL[l.kind]}</td>
+              <td className="num" data-label="No.">{l.count}</td>
+              <td className="num" data-label="Total">{l.total}</td>
+              <td data-label="">
+                <Link className="btn small secondary" href={`${base}?region=${l.region}`}>
+                  Open list
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+const KINDS: Kind[] = ['regular', 'auto', 'reimb']
+
+export function SummaryPR({ rows, base }: { rows: PaymentRequest[]; base: string }) {
+  const lines = REGIONS.flatMap((region) =>
+    KINDS.map((kind) => {
+      const rs = rows.filter((r) => prRegion(r) === region && prKind(r) === kind)
+      const total = fmtTotals(rs.reduce<Record<string, number>>((t, r) => ({ ...t, [r.currency]: (t[r.currency] ?? 0) + Number(r.total_due ?? 0) }), {}))
+      return { region, kind, count: rs.length, total }
+    }),
+  )
+  return <QueueSummary lines={lines} base={base} />
+}
+
+export function SummaryFR({ rows, base }: { rows: FundRequest[]; base: string }) {
+  const lines = REGIONS.flatMap((region) =>
+    KINDS.map((kind) => {
+      const rs = rows.filter((f) => frRegion(f) === region && frKind(f) === kind)
+      return { region, kind, count: rs.length, total: fmtTotals({ PHP: rs.reduce((t, f) => t + Number(f.amount_php ?? 0), 0) }) }
+    }),
+  )
+  return <QueueSummary lines={lines} base={base} />
+}
