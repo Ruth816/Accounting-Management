@@ -14,12 +14,14 @@ export function PRTable({
   empty = 'Nothing here.',
   canDelete,
   canEdit,
+  canApprove,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
   empty?: string
   canDelete?: (r: PaymentRequest) => boolean
   canEdit?: (r: PaymentRequest) => boolean
+  canApprove?: (r: PaymentRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -36,7 +38,7 @@ export function PRTable({
             <th className="num">Amount due</th>
             <th>Required</th>
             <th>Status</th>
-            {(canDelete || canEdit) && <th aria-label="Actions" />}
+            {(canDelete || canEdit || canApprove) && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -59,9 +61,14 @@ export function PRTable({
               <td data-label="Status">
                 <StatusBadge status={r.status} />
               </td>
-              {(canDelete || canEdit) && (
+              {(canDelete || canEdit || canApprove) && (
                 <td data-label="">
                   <span className="row-actions">
+                    {canApprove?.(r) && (
+                      <ActionForm action={requestAction} hidden={{ op: 'approve_pr', id: r.id }} confirm={`Approve payment request ${r.req_no}?`}>
+                        <Submit className="btn small">Approve</Submit>
+                      </ActionForm>
+                    )}
                     {canEdit?.(r) && (
                       <EditButton
                         href={`/payment-requests/${r.id}${['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status) ? '' : '?edit=1'}`}
@@ -86,12 +93,14 @@ export function FRTable({
   canDelete,
   canEdit,
   canMarkReady,
+  canApprove,
 }: {
   rows: FundRequest[]
   empty?: string
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => boolean
   canMarkReady?: (f: FundRequest) => boolean
+  canApprove?: (f: FundRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -107,7 +116,7 @@ export function FRTable({
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
             <th>Status</th>
-            {(canDelete || canEdit) && <th aria-label="Actions" />}
+            {(canDelete || canEdit || canApprove) && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -133,9 +142,14 @@ export function FRTable({
                   <FRStatusBadge f={f} />
                 )}
               </td>
-              {(canDelete || canEdit) && (
+              {(canDelete || canEdit || canApprove) && (
                 <td data-label="">
                   <span className="row-actions">
+                    {canApprove?.(f) && (
+                      <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''}?`}>
+                        <Submit className="btn small">Approve</Submit>
+                      </ActionForm>
+                    )}
                     {canEdit?.(f) && (
                       <EditButton
                         href={`/fund-requests/${f.id}${f.locked ? '?edit=1' : ''}`}

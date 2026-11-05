@@ -127,7 +127,11 @@ export default async function Dashboard() {
       {is('payment_approver') && (
         <Queue id="approve-pr" title="Waiting for payment approval" count={toApprove?.data?.length}>
           {toApprove?.data?.length ? (
-            <GroupedPR rows={toApprove.data as PaymentRequest[]} name={name} />
+            <GroupedPR
+              rows={toApprove.data as PaymentRequest[]}
+              name={name}
+              canApprove={(r) => r.status === 'pending_payment_approval' && r.requestor_id !== me.id && (r.approver_id === me.id || is('admin'))}
+            />
           ) : (
             <p className="muted">No requests waiting for approval.</p>
           )}
@@ -137,7 +141,10 @@ export default async function Dashboard() {
       {is('fund_approver') && (
         <Queue id="approve-fr" title="Fund requests waiting for your approval" count={toFundApprove?.data?.length}>
           {toFundApprove?.data?.length ? (
-            <GroupedFR rows={toFundApprove.data as FundRequest[]} />
+            <GroupedFR
+              rows={toFundApprove.data as FundRequest[]}
+              canApprove={(f) => f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || is('admin'))}
+            />
           ) : (
             <p className="muted">No fund requests waiting for you.</p>
           )}

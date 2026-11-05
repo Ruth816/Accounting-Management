@@ -63,12 +63,14 @@ export function GroupedPR({
   regions = REGIONS,
   canDelete,
   canEdit,
+  canApprove,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
   regions?: Region[]
   canDelete?: (r: PaymentRequest) => boolean
   canEdit?: (r: PaymentRequest) => boolean
+  canApprove?: (r: PaymentRequest) => boolean
 }) {
   const kinds: Kind[] = ['regular', 'auto', 'reimb']
   return (
@@ -85,7 +87,7 @@ export function GroupedPR({
               const total = fmtTotals(rs.reduce<Record<string, number>>((t, r) => ({ ...t, [r.currency]: (t[r.currency] ?? 0) + Number(r.total_due ?? 0) }), {}))
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>
-                  {rs.length > 0 && <PRTable rows={rs} name={name} canDelete={canDelete} canEdit={canEdit} />}
+                  {rs.length > 0 && <PRTable rows={rs} name={name} canDelete={canDelete} canEdit={canEdit} canApprove={canApprove} />}
                 </Group>
               )
             })}
@@ -102,9 +104,11 @@ export function GroupedFR({
   canDelete,
   canEdit,
   canMarkReady,
+  canApprove,
 }: {
   rows: FundRequest[]
   regions?: Region[]
+  canApprove?: (f: FundRequest) => boolean
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => boolean
   canMarkReady?: (f: FundRequest) => boolean
@@ -124,7 +128,7 @@ export function GroupedFR({
               const total = fmtTotals({ PHP: rs.reduce((t, f) => t + Number(f.amount_php ?? 0), 0) })
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>
-                  {rs.length > 0 && <FRTable rows={rs} canDelete={canDelete} canEdit={canEdit} canMarkReady={canMarkReady} />}
+                  {rs.length > 0 && <FRTable rows={rs} canDelete={canDelete} canEdit={canEdit} canMarkReady={canMarkReady} canApprove={canApprove} />}
                 </Group>
               )
             })}
