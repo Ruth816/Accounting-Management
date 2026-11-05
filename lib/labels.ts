@@ -133,3 +133,7 @@ export function frStatusLabel(f: FRStage) {
 }
 export const canBeMadeReady = (f: FRStage) =>
   (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
+
+// Admins and Fund Approvers who also prepare fund requests can send and approve their own in one click (Ruth, 5 November).
+export const canSubmitApprove = (f: { status: string; locked?: boolean | null }, is: (role: Role) => boolean) =>
+  is('fund_requestor') && is('fund_approver') && !f.locked && ['in_funding_preparation', 'returned_to_fund_requestor'].includes(f.status)
