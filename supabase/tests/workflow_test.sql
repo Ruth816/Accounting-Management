@@ -303,9 +303,6 @@ select t.eq((select payment_date::text || ' ' || status::text from fund_requests
             '2026-11-05 approved_ready_for_qb', 'Admin edits an approved fund request, status stays');
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval'), 2, 'edits after approval are logged');
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 2, 'edit log has who and when');
-select mark_posted_to_qb(array[(select v from ids where k='lfr')]);
-select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'Posted to QuickBooks');
-select t.expect_error(format('select save_fund_lines(%L, %L::jsonb)', (select v from ids where k='lfr'), '[]'), 'no longer be edited|Items come from');
 select t.as_user('fr');
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'no longer be edited');
 select t.as_user('adm');
@@ -525,6 +522,10 @@ select t.as_user('adm');
 select t.eq(mark_posted_to_qb(array[(select v from ids where k='fr2')]), 1, 'marks one request posted');
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='fr2')), 'approved_posted_to_qb', 'status is posted to QuickBooks');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Tick at least one');
+-- Posted to QuickBooks locks it: no more edits, even by an Admin (Ruth, 5 November).
+select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='fr2'), '{}'), 'Posted to QuickBooks');
+select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='pr'), '{}'), 'Posted to QuickBooks');
+select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='fr2'), 'x'), 'cannot be deleted');
 
 -- The next REQ No. shown on the form is the one the next save takes.
 select t.as_user('req');
