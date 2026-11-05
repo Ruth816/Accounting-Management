@@ -7,7 +7,7 @@ import { requestAction } from '@/app/actions'
 // Edit on a list row. A request waiting for approval is first taken back
 // (payment request to Draft, fund request to In Funding Preparation), then
 // the request opens for editing and is submitted again from there.
-export function EditButton({ href, withdrawOp }: { href: string; withdrawOp?: 'withdraw_pr' | 'withdraw_fr' }) {
+export function EditButton({ href, withdrawOp, label = 'Edit' }: { href: string; withdrawOp?: 'withdraw_pr' | 'withdraw_fr'; label?: string }) {
   const [pending, start] = useTransition()
   const router = useRouter()
   const onClick = () => {
@@ -28,7 +28,7 @@ export function EditButton({ href, withdrawOp }: { href: string; withdrawOp?: 'w
   }
   return (
     <button type="button" className="btn small secondary" onClick={onClick} disabled={pending}>
-      {pending ? 'Opening…' : 'Edit'}
+      {pending ? 'Opening…' : label}
     </button>
   )
 }
