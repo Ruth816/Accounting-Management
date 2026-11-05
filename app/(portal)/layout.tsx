@@ -1,4 +1,5 @@
 import { COMPANY, LogoMark } from '@/components/Logo'
+import { PageBack } from '@/components/PageBack'
 import Link from 'next/link'
 import { getMe } from '@/lib/auth'
 import { signOut } from '@/app/actions'
@@ -89,7 +90,10 @@ export default async function PortalLayout({ children }: { children: React.React
           </span>
         </div>
         <UpdateWatcher current={process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev'} />
-        <main className="page">{children}</main>
+        <main className="page">
+          <PageBack />
+          {children}
+        </main>
       </div>
     </div>
   )

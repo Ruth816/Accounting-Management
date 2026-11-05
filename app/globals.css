@@ -227,6 +227,7 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 
 .row-actions { display: inline-flex; gap: 6px; }
 .back-btn { align-self: flex-start; }
+.page > .back-btn { margin-bottom: 12px; }
 
 /* NCR / VisMin tabs and type groups */
 .region-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
