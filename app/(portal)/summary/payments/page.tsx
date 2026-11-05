@@ -1,5 +1,6 @@
-import { SummaryPage } from '@/components/SummaryPage'
+import { redirect } from 'next/navigation'
 
-export default function Page({ searchParams }: { searchParams: Promise<{ date?: string; approver?: string }> }) {
-  return <SummaryPage kind="payments" searchParams={searchParams} />
+// The approved payments summary became the QuickBooks imported summary (Ruth, 5 November).
+export default function Page() {
+  redirect('/summary/quickbooks')
 }
