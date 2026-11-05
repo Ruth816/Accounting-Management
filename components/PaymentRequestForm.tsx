@@ -20,6 +20,7 @@ export function PaymentRequestForm({
   nextReqNo,
   routes,
   requestorId,
+  afterApproval,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
@@ -31,6 +32,8 @@ export function PaymentRequestForm({
   nextReqNo?: string | null
   routes?: { NCR: string[]; VisMin: string[] }
   requestorId?: string
+  // An Admin correcting an approved request: save only, the status stays.
+  afterApproval?: boolean
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(
     savePaymentRequest,
@@ -302,12 +305,23 @@ export function PaymentRequestForm({
 
       <Message state={state} />
       <div className="actions sticky">
-        <Submit className="btn secondary" name="intent" value="save">
-          Save as draft
-        </Submit>
-        <Submit name="intent" value="submit">
-          {returned ? 'Resubmit for approval' : 'Submit for approval'}
-        </Submit>
+        {afterApproval ? (
+          <>
+            <input type="hidden" name="after_approval" value="1" />
+            <Submit name="intent" value="save">
+              Save changes
+            </Submit>
+          </>
+        ) : (
+          <>
+            <Submit className="btn secondary" name="intent" value="save">
+              Save as draft
+            </Submit>
+            <Submit name="intent" value="submit">
+              {returned ? 'Resubmit for approval' : 'Submit for approval'}
+            </Submit>
+          </>
+        )}
       </div>
       </PendingProvider>
     </form>

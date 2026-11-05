@@ -13,8 +13,15 @@ import { ActionForm, Submit } from '@/components/ActionForm'
 import { requestAction } from '@/app/actions'
 import type { Attachment, AuditEntry, FundRequest, Lookup, PaymentRequest } from '@/lib/types'
 
-export default async function FundRequestPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function FundRequestPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ edit?: string }>
+}) {
   const { id } = await params
+  const { edit } = await searchParams
   const { supabase, me, is } = await getMe()
   const { people, name } = await getDirectory()
 
@@ -32,10 +39,14 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
     fr.cheque_id ? supabase.rpc('cheque_total', { p_cheque: fr.cheque_id }) : Promise.resolve({ data: null }),
   ])
 
-  const editable =
-    is('fund_requestor') && !fr.locked && (fr.status === 'in_funding_preparation' || fr.status === 'returned_to_fund_requestor')
   const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
   const approved = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
+  // An Admin may correct an approved fund request (Ruth, 5 November); it can't be deleted.
+  const canEditApproved = is('admin') && approved
+  const afterApproval = canEditApproved && edit === '1'
+  const editable =
+    (is('fund_requestor') && !fr.locked && (fr.status === 'in_funding_preparation' || fr.status === 'returned_to_fund_requestor')) ||
+    afterApproval
 
   let formData: { lookups: Lookup[]; cheques: ChequeOption[] } | null = null
   if (editable) {
@@ -103,7 +114,12 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
 
       {editable && formData ? (
         <>
-          <FundRequestForm fr={fr} lookups={formData.lookups} approvers={approvers} cheques={formData.cheques} />
+          <FundRequestForm fr={fr} lookups={formData.lookups} approvers={approvers} cheques={formData.cheques} afterApproval={afterApproval} />
+          {afterApproval && (
+            <Link className="btn secondary" href={`/fund-requests/${fr.id}`}>
+              Done editing
+            </Link>
+          )}
           <section className="card">
             <h2>Attachments</h2>
             <Attachments files={(files ?? []) as Attachment[]} frId={fr.id} canEdit userId={me.id} />
@@ -127,6 +143,14 @@ export default async function FundRequestPage({ params }: { params: Promise<{ id
         </>
       ) : (
         <>
+          {canEditApproved && (
+            <div className="row">
+              <Link className="btn secondary" href={`/fund-requests/${fr.id}?edit=1`}>
+                Edit details
+              </Link>
+              <span className="muted small">Approved requests can be corrected but not deleted.</span>
+            </div>
+          )}
           <FRView
             fr={fr}
             chequeNo={cheque?.cheque_no}

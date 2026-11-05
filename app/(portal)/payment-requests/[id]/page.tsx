@@ -19,10 +19,10 @@ export default async function PaymentRequestPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ error?: string; renumbered?: string }>
+  searchParams: Promise<{ error?: string; renumbered?: string; edit?: string }>
 }) {
   const { id } = await params
-  const { error, renumbered } = await searchParams
+  const { error, renumbered, edit } = await searchParams
   const { supabase, me, is, myRegion } = await getMe()
   const { people, name } = await getDirectory()
 
@@ -55,7 +55,11 @@ export default async function PaymentRequestPage({
   }
 
   const mine = pr.requestor_id === me.id
-  const editable = (mine || is('admin')) && (pr.status === 'draft' || pr.status === 'returned_to_requestor')
+  const openForEdit = pr.status === 'draft' || pr.status === 'returned_to_requestor'
+  // An Admin may correct an approved request (Ruth, 5 November); it can't be deleted.
+  const canEditApproved = is('admin') && !openForEdit && !['cancelled', 'expired', 'pending_payment_approval'].includes(pr.status)
+  const afterApproval = canEditApproved && edit === '1'
+  const editable = ((mine || is('admin')) && openForEdit) || afterApproval
   const routes = await getRoutes()
   const routed = routes[pr.region].length > 0
   const hint = await routeHint(routes)
@@ -112,17 +116,32 @@ export default async function PaymentRequestPage({
             lockedRegion={pr.requestor_id === me.id ? myRegion : null}
             routes={routes}
             requestorId={pr.requestor_id}
+            afterApproval={afterApproval}
           />
           <section className="card">
             <h2>Attachments</h2>
             <Attachments files={(files ?? []) as Attachment[]} prId={pr.id} canEdit userId={me.id} />
           </section>
-          <ActionForm action={requestAction} hidden={{ op: 'cancel_pr', id: pr.id }} confirm="Cancel this request? It stays in the audit log.">
-            <Submit className="btn danger secondary">Cancel request</Submit>
-          </ActionForm>
+          {afterApproval ? (
+            <Link className="btn secondary" href={`/payment-requests/${pr.id}`}>
+              Done editing
+            </Link>
+          ) : (
+            <ActionForm action={requestAction} hidden={{ op: 'cancel_pr', id: pr.id }} confirm="Cancel this request? It stays in the audit log.">
+              <Submit className="btn danger secondary">Cancel request</Submit>
+            </ActionForm>
+          )}
         </>
       ) : (
         <>
+          {canEditApproved && (
+            <div className="row">
+              <Link className="btn secondary" href={`/payment-requests/${pr.id}?edit=1`}>
+                Edit details
+              </Link>
+              <span className="muted small">Approved requests can be corrected but not deleted.</span>
+            </div>
+          )}
           <PRView pr={pr} name={name} />
           <section className="card">
             <h2>Attachments</h2>

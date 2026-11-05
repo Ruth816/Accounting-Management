@@ -16,11 +16,14 @@ export function FundRequestForm({
   lookups,
   approvers,
   cheques,
+  afterApproval,
 }: {
   fr: FundRequest
   lookups: Lookup[]
   approvers: Person[]
   cheques: ChequeOption[]
+  // An Admin correcting an approved fund request: save only, the status stays.
+  afterApproval?: boolean
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(saveFundRequest)
   const manual = fr.payment_request_id === null // auto debit or check payment: fields are typed
@@ -471,12 +474,23 @@ export function FundRequestForm({
 
         <Message state={state} />
         <div className="actions sticky">
-          <Submit className="btn secondary" name="intent" value="save">
-            Save as draft
-          </Submit>
-          <Submit name="intent" value="submit">
-            {fr.status === 'returned_to_fund_requestor' ? 'Resubmit' : 'Send for fund approval'}
-          </Submit>
+          {afterApproval ? (
+            <>
+              <input type="hidden" name="after_approval" value="1" />
+              <Submit name="intent" value="save">
+                Save changes
+              </Submit>
+            </>
+          ) : (
+            <>
+              <Submit className="btn secondary" name="intent" value="save">
+                Save as draft
+              </Submit>
+              <Submit name="intent" value="submit">
+                {fr.status === 'returned_to_fund_requestor' ? 'Resubmit' : 'Send for fund approval'}
+              </Submit>
+            </>
+          )}
         </div>
       </PendingProvider>
     </form>

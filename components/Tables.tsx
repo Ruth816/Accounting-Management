@@ -62,7 +62,7 @@ export function PRTable({
                   <span className="row-actions">
                     {canEdit?.(r) && (
                       <EditButton
-                        href={`/payment-requests/${r.id}`}
+                        href={`/payment-requests/${r.id}${['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status) ? '' : '?edit=1'}`}
                         withdrawOp={r.status === 'pending_payment_approval' ? 'withdraw_pr' : undefined}
                       />
                     )}
@@ -128,7 +128,7 @@ export function FRTable({
                   <span className="row-actions">
                     {canEdit?.(f) && (
                       <EditButton
-                        href={`/fund-requests/${f.id}`}
+                        href={`/fund-requests/${f.id}${f.locked ? '?edit=1' : ''}`}
                         withdrawOp={f.status === 'pending_fund_approval' ? 'withdraw_fr' : undefined}
                       />
                     )}
