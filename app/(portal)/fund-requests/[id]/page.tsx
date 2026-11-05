@@ -93,7 +93,7 @@ export default async function FundRequestPage({
                 <Submit className="btn small">Ready for funding</Submit>
               </ActionForm>
             )}
-            {canSubmitApprove(fr, is) && (
+            {canSubmitApprove(fr, is, me.id) && (
               <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It moves to Fund approved.">
                 <Submit className="btn small">Submit &amp; approve</Submit>
               </ActionForm>
