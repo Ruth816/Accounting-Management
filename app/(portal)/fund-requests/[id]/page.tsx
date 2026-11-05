@@ -2,13 +2,13 @@ import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { FR_OPEN_STATUSES } from '@/lib/labels'
+import { FR_OPEN_STATUSES, canBeMadeReady } from '@/lib/labels'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
 import { FRView } from '@/components/FRView'
 import { PRView } from '@/components/PRView'
-import { StatusBadge } from '@/components/StatusBadge'
+import { FRStatusBadge } from '@/components/StatusBadge'
 import { Tracker } from '@/components/Tracker'
 import { Attachments } from '@/components/Attachments'
 import { ActionForm, Submit } from '@/components/ActionForm'
@@ -82,13 +82,18 @@ export default async function FundRequestPage({
         <div>
           <h1>Fund request {fr.ref_no ?? ''}</h1>
           <div className="row status-actions">
-            <StatusBadge status={fr.status} />
+            <FRStatusBadge f={fr} />
             {canEditApproved && !afterApproval && (
               <Link className="btn secondary small" href={`/fund-requests/${fr.id}?edit=1`}>
                 Edit
               </Link>
             )}
-            {is('fund_approver') && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (
+            {is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && canBeMadeReady(fr) && (
+              <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: fr.id }} confirm="Put this request on Ready for funding for today?">
+                <Submit className="btn small">Ready for funding</Submit>
+              </ActionForm>
+            )}
+            {is('fund_approver') && fr.funded_at && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (
               <ActionForm action={requestAction} hidden={{ op: 'post_qb', id: fr.id }} confirm={QB_CONFIRM}>
                 <Submit className="btn small">Export to QuickBooks</Submit>
               </ActionForm>

@@ -33,14 +33,13 @@ export default async function PortalLayout({ children }: { children: React.React
           : []),
       ],
     },
-    ...(is('fund_approver') || is('payment_approver') || is('admin')
+    // Summaries: Admins and Fund Approvers only (Ruth, 5 November).
+    ...(is('fund_approver') || is('admin')
       ? [
           {
             title: 'Summaries',
             items: [
-              ...(is('fund_approver') || is('admin')
-                ? [{ href: '/summary/funding', label: 'Ready for funding', icon: 'summary' as const }]
-                : []),
+              { href: '/summary/funding', label: 'Ready for funding', icon: 'summary' as const },
               { href: '/summary/quickbooks', label: 'QuickBooks imported summary', icon: 'summary' as const },
             ],
           },

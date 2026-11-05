@@ -29,6 +29,7 @@ export type SummaryRow = {
   itemNo: string // items covered, e.g. "1-3"
   payDate: string | null
   reqNo: string // payment request REQ No., when the fund request came from one
+  funded: boolean
 }
 
 export type Totals = Record<string, number> // per currency
@@ -42,16 +43,16 @@ export const timeManila = (iso: string) =>
 
 export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel: string; accountLabel: string; file: string; verb: 'approved' | 'exported' }
+type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel: string; accountLabel: string; file: string; verb: string }
 export const KIND_INFO: Record<SummaryKind, KindInfo> = {
   funding: {
     title: 'Ready for funding',
-    sub: 'Requests approved for funding, with totals per day, region and type of request. Send out funds based on the totals for the day.',
+    sub: 'Requests you marked Ready for funding, with totals per day, region and type of request. Send out the funds, mark the day as funded, then import it to QuickBooks.',
     role: 'fund_approver',
     amountLabel: 'Amount to fund (PHP)',
     accountLabel: 'Payment account',
     file: 'funding-summary',
-    verb: 'approved',
+    verb: 'made ready for funding',
   },
   // Replaces the approved payments summary (Ruth, 5 November): approved fund
   // requests already exported to QuickBooks, by the day they were exported.
@@ -87,9 +88,9 @@ export function fmtTotals(t: Totals) {
 export async function summaryAccess(kind: SummaryKind, approverParam?: string) {
   const { me, is } = await getMe()
   const role = KIND_INFO[kind].role
-  const allowed = is(role) || is('admin') || (kind === 'quickbooks' && is('payment_approver'))
-  // Everyone on the QuickBooks summary sees every approver's requests;
-  // Admins can pick on both pages. isAdmin here means "may pick an approver".
+  // Summaries are for Admins and Fund Approvers only (Ruth, 5 November).
+  const allowed = is(role) || is('admin')
+  // isAdmin here means "may pick an approver".
   const isAdmin = is('admin') || (kind === 'quickbooks' && allowed)
   let approver: string | 'all' = is(role) && kind === 'funding' ? me.id : 'all'
   if (isAdmin && approverParam === 'all') approver = 'all'
@@ -126,21 +127,23 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     ...itemsOf(f),
     payDate: f.payment_date ?? null,
     reqNo: '',
+    funded: Boolean(f.funded_at),
   })
 
   if (kind === 'funding') {
     let q = supabase
       .from('fund_requests')
       .select('*, cheques(cheque_no)')
-      .not('approved_on', 'is', null)
+      .not('ready_for_funding_at', 'is', null)
       .neq('status', 'cancelled')
-      .gte('approved_on', from)
-      .lt('approved_on', to)
-      .order('approved_on')
+      .gte('ready_for_funding_at', from)
+      .lt('ready_for_funding_at', to)
+      .order('ready_for_funding_at')
       .limit(10000)
     if (approver !== 'all') q = q.eq('approved_by', approver)
     const { data } = await q
-    const rows = (data ?? []).map((f) => toRow(f, f.approved_on))
+    // Dated by the day the Fund Approver clicked Ready for funding.
+    const rows = (data ?? []).map((f) => toRow(f, f.ready_for_funding_at))
     const withPr = (data ?? []).filter((f) => f.payment_request_id).map((f) => f.id)
     if (withPr.length) {
       const { data: nos } = await supabase.rpc('fr_req_nos', { p_frs: withPr })

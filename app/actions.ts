@@ -230,6 +230,17 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
       case 'reviewed':
         await call('set_fund_reviewed', { p_id: id, p_reviewed: fd.get('value') === 'true' })
         return done(fd.get('value') === 'true' ? 'Marked reviewed.' : 'Review cleared.')
+      case 'ready_for_funding':
+        await call('mark_ready_for_funding', { p_id: id })
+        return done('Moved to Ready for funding.')
+      case 'mark_funded': {
+        const n = await call('mark_funded', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
+        return done(n === 1 ? 'Marked as funded.' : `${n} requests marked as funded.`)
+      }
+      case 'import_qb': {
+        const n = await call('mark_posted_to_qb', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
+        return done(n === 1 ? 'Imported to QuickBooks and locked.' : `${n} requests imported to QuickBooks and locked.`)
+      }
       case 'post_qb':
         await call('mark_posted_to_qb', { p_ids: [id] })
         return done('Exported to QuickBooks and locked.')

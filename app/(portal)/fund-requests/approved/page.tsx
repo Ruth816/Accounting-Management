@@ -6,7 +6,7 @@ export default async function FundApprovedPage({ searchParams }: { searchParams:
   return (
     <FundRequestList
       title="Fund approved"
-      sub="Approved by the Fund Approver, ready for or posted to QuickBooks."
+      sub="Pre-approved by the Fund Approver. Click Ready for funding on a request when you are ready to fund it; it then goes to the Ready for funding list for that day."
       statuses={FR_APPROVED_STATUSES}
       base="/fund-requests/approved"
       region={region}
