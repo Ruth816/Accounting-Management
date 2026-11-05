@@ -41,7 +41,7 @@ export default async function FundRequestPage({
     fr.cheque_id ? supabase.rpc('cheque_total', { p_cheque: fr.cheque_id }) : Promise.resolve({ data: null }),
   ])
 
-  const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
+  const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || fr.fund_requestor_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
   const approved = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   // An Admin may correct an approved fund request (Ruth, 5 November); it can't be deleted.
   const postedToQb = fr.status === 'approved_posted_to_qb'
