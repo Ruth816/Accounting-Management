@@ -77,6 +77,7 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
   payload.request_kind = str(fd, 'request_kind') ?? 'regular'
   payload.reimbursable = payload.request_kind === 'reimbursable'
   payload.terms_accepted = fd.get('terms_accepted') === 'on'
+  payload.edit_remarks = str(fd, 'edit_remarks')
   const amounts = fd.getAll('item_amount').map(String)
   payload.items = fd.getAll('item_description').map((d, i) => ({ description: String(d), amount: amounts[i] ?? '' }))
   const { data: savedId, error } = await supabase.rpc('save_payment_request', { p_id: id, p: payload })
@@ -114,6 +115,7 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
   const payload: Record<string, unknown> = Object.fromEntries(fields.map((k) => [k, str(fd, k)]))
   // An unedited memo is sent empty so the database keeps pre-filling it.
   payload.memo = fd.get('memo_edited') === 'true' ? str(fd, 'memo') : null
+  payload.edit_remarks = str(fd, 'edit_remarks')
   // Auto debit / check payment: several items, each with its own category.
   const hasLines = fd.has('line_description')
   const lineAmounts = fd.getAll('line_amount').map(String)
@@ -167,7 +169,7 @@ export async function markPostedToQb(_: ActionState, fd: FormData): Promise<Acti
   if (ids.length === 0) return { error: 'Tick at least one request.' }
   const { data, error } = await supabase.rpc('mark_posted_to_qb', { p_ids: ids })
   if (error) return { error: error.message }
-  return done(data === 1 ? 'Marked as posted to QuickBooks.' : `${data} requests marked as posted to QuickBooks.`)
+  return done(data === 1 ? 'Exported to QuickBooks and locked.' : `${data} requests exported to QuickBooks and locked.`)
 }
 
 // Every other button: one dispatcher keyed by "op".
@@ -228,6 +230,9 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
       case 'reviewed':
         await call('set_fund_reviewed', { p_id: id, p_reviewed: fd.get('value') === 'true' })
         return done(fd.get('value') === 'true' ? 'Marked reviewed.' : 'Review cleared.')
+      case 'post_qb':
+        await call('mark_posted_to_qb', { p_ids: [id] })
+        return done('Exported to QuickBooks and locked.')
       case 'approve_fr':
         await call('approve_fund_request', { p_id: id })
         return done('Fund request approved.')

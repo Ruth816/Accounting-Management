@@ -1,3 +1,4 @@
+import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
@@ -80,7 +81,19 @@ export default async function FundRequestPage({
       <div className="page-head">
         <div>
           <h1>Fund request {fr.ref_no ?? ''}</h1>
-          <StatusBadge status={fr.status} />
+          <div className="row status-actions">
+            <StatusBadge status={fr.status} />
+            {canEditApproved && !afterApproval && (
+              <Link className="btn secondary small" href={`/fund-requests/${fr.id}?edit=1`}>
+                Edit
+              </Link>
+            )}
+            {is('fund_approver') && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (
+              <ActionForm action={requestAction} hidden={{ op: 'post_qb', id: fr.id }} confirm={QB_CONFIRM}>
+                <Submit className="btn small">Export to QuickBooks</Submit>
+              </ActionForm>
+            )}
+          </div>
         </div>
         <div className="row">
           {pr && (
@@ -146,14 +159,9 @@ export default async function FundRequestPage({
       ) : (
         <>
           {canEditApproved && (
-            <div className="row">
-              <Link className="btn secondary" href={`/fund-requests/${fr.id}?edit=1`}>
-                Edit details
-              </Link>
-              <span className="muted small">Approved requests can be corrected but not deleted.</span>
-            </div>
+            <p className="muted small">Approved: it can still be corrected (Edit, with remarks) until it is exported to QuickBooks. It can&apos;t be deleted.</p>
           )}
-          {postedToQb && <p className="muted small">Posted to QuickBooks: locked, no more edits or deletion.</p>}
+          {postedToQb && <p className="muted small">Exported to QuickBooks: locked, no more edits or deletion.</p>}
           {(() => {
             const last = [...((audit ?? []) as AuditEntry[])].reverse().find((e) => e.action === 'Edited after approval')
             return last ? (

@@ -86,7 +86,14 @@ export default async function PaymentRequestPage({
       <div className="page-head">
         <div>
           <h1>Payment request {pr.req_no}</h1>
-          <StatusBadge status={pr.status} />
+          <div className="row status-actions">
+            <StatusBadge status={pr.status} />
+            {canEditApproved && !afterApproval && (
+              <Link className="btn secondary small" href={`/payment-requests/${pr.id}?edit=1`}>
+                Edit
+              </Link>
+            )}
+          </div>
         </div>
         {fr && (
           <Link href={`/fund-requests/${fr.id}`} className="btn secondary small">
@@ -139,14 +146,9 @@ export default async function PaymentRequestPage({
       ) : (
         <>
           {canEditApproved && (
-            <div className="row">
-              <Link className="btn secondary" href={`/payment-requests/${pr.id}?edit=1`}>
-                Edit details
-              </Link>
-              <span className="muted small">Approved requests can be corrected but not deleted.</span>
-            </div>
+            <p className="muted small">Approved: it can still be corrected (Edit, with remarks) until it is exported to QuickBooks. It can&apos;t be deleted.</p>
           )}
-          {postedToQb && <p className="muted small">Posted to QuickBooks: locked, no more edits or deletion.</p>}
+          {postedToQb && <p className="muted small">Exported to QuickBooks: locked, no more edits or deletion.</p>}
           {lastEdit && (
             <p className="muted small">
               Last edited after approval on {fmtDateTime(lastEdit.created_at)} by {name(lastEdit.actor_id)}.

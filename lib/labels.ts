@@ -11,7 +11,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   pending_fund_approval: 'Pending Fund Approval',
   returned_to_fund_requestor: 'Returned to Fund Requestor',
   approved_ready_for_qb: 'Approved – Ready for QuickBooks',
-  approved_posted_to_qb: 'Approved – Posted to QuickBooks',
+  approved_posted_to_qb: 'Exported to QuickBooks – Locked',
   sync_failed: 'Sync Failed',
 }
 

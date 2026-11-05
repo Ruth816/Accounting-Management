@@ -189,7 +189,7 @@ export async function SummaryPage({ kind, searchParams }: { kind: SummaryKind; s
                     <td className="no-print row-actions">
                       {postable(r) && (
                         <button type="submit" form={POST_QB_FORM} name="one" value={r.id} className="btn small">
-                          Posted to QuickBooks
+                          Export to QuickBooks
                         </button>
                       )}
                       {kind === 'funding' && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status) && (

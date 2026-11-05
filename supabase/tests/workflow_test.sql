@@ -292,17 +292,19 @@ select t.eq((select status::text || ' ' || coalesce(fund_request_id::text, 'none
 select t.as_user('adm');
 select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'already registered');
 -- An Admin may still correct an approved request; the status stays and it is logged.
-select save_payment_request((select v from ids where k='dpr'), (select to_jsonb(p) || jsonb_build_object('payable_to', 'Corrected payee')
+select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='dpr'), '{"payable_to":"x"}'), 'Add remarks');
+select save_payment_request((select v from ids where k='dpr'), (select to_jsonb(p) || jsonb_build_object('payable_to', 'Corrected payee', 'edit_remarks', 'Payee name was misspelled')
   from payment_requests p where id = (select v from ids where k='dpr')));
 select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='dpr')),
             'Corrected payee approved_awaiting_funding', 'Admin edits an approved payment request, status stays');
 insert into ids values ('lfr', (select id from fund_requests where locked and status = 'approved_ready_for_qb' limit 1));
-select save_fund_request((select v from ids where k='lfr'), (select to_jsonb(f) || jsonb_build_object('payment_date', '2026-11-05')
+select save_fund_request((select v from ids where k='lfr'), (select to_jsonb(f) || jsonb_build_object('payment_date', '2026-11-05', 'edit_remarks', 'Payment date moved')
   from fund_requests f where id = (select v from ids where k='lfr')));
 select t.eq((select payment_date::text || ' ' || status::text from fund_requests where id = (select v from ids where k='lfr')),
             '2026-11-05 approved_ready_for_qb', 'Admin edits an approved fund request, status stays');
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval'), 2, 'edits after approval are logged');
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 2, 'edit log has who and when');
+select t.eq((select note from audit_log where action = 'Edited after approval' and fund_request_id = (select v from ids where k='lfr') order by id desc limit 1), 'Payment date moved', 'edit remarks are kept');
 select t.as_user('fr');
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'no longer be edited');
 select t.as_user('adm');

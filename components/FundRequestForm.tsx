@@ -472,6 +472,13 @@ export function FundRequestForm({
           </p>
         </section>
 
+        {afterApproval && (
+          <section className="card">
+            <h2>Remarks *</h2>
+            <textarea name="edit_remarks" rows={2} required placeholder="What needed to change, or what was changed" />
+            <p className="small muted">Saved in the history with your name and the time.</p>
+          </section>
+        )}
         <Message state={state} />
         <div className="actions sticky">
           {afterApproval ? (
