@@ -178,7 +178,7 @@ export default async function Dashboard() {
                 <strong>Check payment request:</strong> {CHECK_PAYMENT_HELP}
               </li>
             </ul>
-            <FRTable rows={frPreparing} empty="Nothing in preparation." canApprove={(f) => canSubmitApprove(f, is)} />
+            <FRTable rows={frPreparing} empty="Nothing in preparation." canApprove={(f) => canSubmitApprove(f, is, me.id)} />
           </Queue>
         </>
       )}
