@@ -160,6 +160,7 @@ export function FRTable({
                       <EditButton
                         href={`/fund-requests/${f.id}${f.locked ? '?edit=1' : ''}`}
                         withdrawOp={f.status === 'pending_fund_approval' ? 'withdraw_fr' : undefined}
+                        label={f.status === 'in_funding_preparation' ? 'Prepare for Fund request' : 'Edit'}
                       />
                     )}
                     {canDelete?.(f) && (
