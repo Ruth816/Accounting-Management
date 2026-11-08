@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP, canSubmitApprove } from '@/lib/labels'
-import { getDirectory, getMe } from '@/lib/auth'
-import { FRTable, PRTable } from '@/components/Tables'
+import { getMe } from '@/lib/auth'
+import { FRTable } from '@/components/Tables'
 import { todayManila } from '@/lib/summary'
 import { SummaryFR, SummaryPR } from '@/components/Grouped'
 import { ActionForm, Submit } from '@/components/ActionForm'
@@ -12,11 +12,10 @@ const WORKFLOW_ROLES = ['payment_requestor', 'payment_approver', 'fund_requestor
 
 export default async function Dashboard() {
   const { supabase, me, is } = await getMe()
-  const { name } = await getDirectory()
 
   const headCount = (status: string[]) =>
     supabase.from('payment_requests').select('id', { count: 'exact', head: true }).in('status', status)
-  const [mine, toApprove, toReceive, preparing, toFundApprove, recent, coPending, coFunding, coFundApproval, coApproved] = await Promise.all([
+  const [mine, toApprove, toReceive, preparing, toFundApprove, coPending, coFunding, coFundApproval, coApproved] = await Promise.all([
     is('payment_requestor')
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
@@ -35,9 +34,6 @@ export default async function Dashboard() {
       ? (is('admin')
           ? supabase.from('fund_requests').select('*').eq('status', 'pending_fund_approval').order('submitted_on')
           : supabase.from('fund_requests').select('*').or(`fund_approver_id.eq.${me.id},fund_requestor_id.eq.${me.id}`).eq('status', 'pending_fund_approval').order('submitted_on'))
-      : null,
-    is('admin')
-      ? supabase.from('payment_requests').select('*').not('status', 'in', '(draft,cancelled)').order('updated_at', { ascending: false }).limit(20)
       : null,
     is('admin') ? headCount(['pending_payment_approval']) : null,
     is('admin') ? headCount(['approved_awaiting_funding', 'in_funding_preparation', 'returned_to_fund_requestor']) : null,
@@ -180,18 +176,12 @@ export default async function Dashboard() {
         </>
       )}
 
-      {is('admin') && (
-        <Queue title="Latest requests across the company">
-          <PRTable rows={(recent?.data ?? []) as PaymentRequest[]} name={name} empty="No requests have been submitted yet." />
-        </Queue>
-      )}
-
       {is('payment_requestor') && (
         <Queue
           id="mine"
           title="Your payment requests"
         >
-          <PRTable rows={my} name={name} empty="You have no requests yet." />
+          {my.length ? <SummaryPR rows={my} base="/payment-requests" /> : <p className="muted">You have no requests yet.</p>}
         </Queue>
       )}
     </div>
