@@ -2,7 +2,7 @@ import { EmployeeRegion } from '@/components/EmployeeRegion'
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
-import { adminCreateUser, adminHandOver, adminLookup, adminSetRoutes, sendQueuedSmsNow } from '@/app/actions'
+import { adminCreateUser, adminHandOver, adminLookup, adminMergeUser, adminSetRoutes, sendQueuedSmsNow } from '@/app/actions'
 import { getRoutes } from '@/lib/routes'
 import { usersByRole } from '@/lib/usersByRole'
 import { UserRow } from '@/components/UserRow'
@@ -222,6 +222,50 @@ export default async function AdminPage() {
             </select>
           </label>
           <Submit>Hand over</Submit>
+        </ActionForm>
+      </section>
+
+      <section className="card">
+        <h2>Merge a duplicate account</h2>
+        <p className="muted small">
+          For someone who has two accounts, for example one with a misspelled email. Everything the old account did (requests,
+          approvals, history) moves to the account you keep, and the old account is deleted. This cannot be undone.
+        </p>
+        <ActionForm
+          action={adminMergeUser}
+          className="row"
+          confirm="Move everything from the old account to the account you keep, and delete the old account? This cannot be undone."
+        >
+          <label className="field">
+            <span className="label">Old account (delete)</span>
+            <select name="from" required defaultValue="">
+              <option value="" disabled>
+                Choose an account
+              </option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name} · {p.email}
+                  {p.active ? '' : ' (inactive)'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">Account to keep</span>
+            <select name="to" required defaultValue="">
+              <option value="" disabled>
+                Choose an account
+              </option>
+              {profiles
+                .filter((p) => p.active)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name} · {p.email}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <Submit>Merge and delete</Submit>
         </ActionForm>
       </section>
 

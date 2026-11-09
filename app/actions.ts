@@ -343,11 +343,28 @@ export async function adminDeleteUser(_: ActionState, fd: FormData): Promise<Act
       if (/database error|foreign key|violates/i.test(error.message))
         return {
           error:
-            'This user has requests or history in the portal, so they cannot be deleted. Untick Active and click Save to remove their access instead.',
+            'This user has requests or history in the portal, so they cannot be deleted here. If they have a second, correct account, use Merge a duplicate account further down the page. Otherwise untick Active and click Save to remove their access.',
         }
       return { error: error.message }
     }
     return done('User deleted.')
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+// Duplicate account (for example a misspelled email): move everything to the
+// account to keep, then delete the old sign-in (Ruth, 9 November).
+export async function adminMergeUser(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const supabase = await requireAdmin()
+    const from = str(fd, 'from')
+    const to = str(fd, 'to')
+    const { data: moved, error } = await supabase.rpc('admin_merge_user', { p_from: from, p_to: to })
+    if (error) return { error: error.message }
+    const { error: e2 } = await createAdminClient().auth.admin.deleteUser(from!)
+    if (e2) return { error: `${moved} records were moved and the old account is now inactive, but it could not be deleted: ${e2.message}` }
+    return done(`Done. ${moved} records were moved to the account you kept, and the old account was deleted.`)
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
