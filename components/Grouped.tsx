@@ -73,7 +73,7 @@ export function GroupedPR({
   canEdit?: (r: PaymentRequest) => boolean
   canApprove?: (r: PaymentRequest) => boolean
 }) {
-  const kinds: Kind[] = ['regular', 'auto', 'reimb', 'rfp']
+  const kinds: Kind[] = ['rfp', 'regular', 'auto', 'reimb']
   return (
     <>
       {regions.map((reg) => {
@@ -85,6 +85,8 @@ export function GroupedPR({
             </h2>
             {kinds.map((k) => {
               const rs = inRegion.filter((r) => prKind(r) === k)
+              // Payment requests are now all Requests for payment; the older types show only while they have requests.
+              if (k !== 'rfp' && rs.length === 0) return null
               const total = fmtTotals(rs.reduce<Record<string, number>>((t, r) => ({ ...t, [r.currency]: (t[r.currency] ?? 0) + Number(r.total_due ?? 0) }), {}))
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>

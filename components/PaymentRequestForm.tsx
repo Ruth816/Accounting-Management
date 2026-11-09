@@ -58,8 +58,9 @@ export function PaymentRequestForm({
   const returned = pr?.status === 'returned_to_requestor'
   const filled = rows.filter((r) => r.description.trim() || r.amount.trim()).length
 
-  const currentKind = pr ? pr.request_kind ?? (pr.reimbursable ? 'reimbursable' : 'regular') : 'request_for_payment'
-  const kindChoices = currentKind === 'request_for_payment' ? ['request_for_payment'] : [currentKind, 'request_for_payment']
+  // Payment Requestors only file a Request for payment; the fund types are chosen on the
+  // Fund Requestor's page (Ruth, 9 November). An Admin correcting an approved request keeps its type.
+  const kind = afterApproval && pr ? pr.request_kind ?? (pr.reimbursable ? 'reimbursable' : 'regular') : 'request_for_payment'
   const setRow = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   return (
@@ -78,15 +79,8 @@ export function PaymentRequestForm({
             <input value={requestorName} readOnly disabled />
           </Field>
           <Field label="Request type">
-            {/* Payment Requestors file a Request for payment; fund request (cash/check), auto debit and
-                reimbursable are chosen by the Fund Requestor (Ruth, 9 November). Older requests keep their type. */}
-            <select name="request_kind" defaultValue={currentKind}>
-              {kindChoices.map((k) => (
-                <option key={k} value={k}>
-                  {PR_KIND_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            <input type="hidden" name="request_kind" value={kind} />
+            <input value={PR_KIND_LABEL[kind]} readOnly aria-readonly />
           </Field>
           <Field label="Region" hint={lockedRegion ? `You file ${lockedRegion} requests only` : undefined}>
             {lockedRegion ? (
