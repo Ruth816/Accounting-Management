@@ -50,7 +50,7 @@ export interface PaymentRequest {
   status: Status
   version: number
   reimbursable: boolean
-  request_kind: 'regular' | 'auto_debit' | 'reimbursable'
+  request_kind: 'regular' | 'auto_debit' | 'reimbursable' | 'request_for_payment'
   approval_level: number
   first_approver_id: string | null
   first_approved_on: string | null

@@ -58,6 +58,8 @@ export function PaymentRequestForm({
   const returned = pr?.status === 'returned_to_requestor'
   const filled = rows.filter((r) => r.description.trim() || r.amount.trim()).length
 
+  const currentKind = pr ? pr.request_kind ?? (pr.reimbursable ? 'reimbursable' : 'regular') : 'request_for_payment'
+  const kindChoices = currentKind === 'request_for_payment' ? ['request_for_payment'] : [currentKind, 'request_for_payment']
   const setRow = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   return (
@@ -76,10 +78,12 @@ export function PaymentRequestForm({
             <input value={requestorName} readOnly disabled />
           </Field>
           <Field label="Request type">
-            <select name="request_kind" defaultValue={pr?.request_kind ?? (pr?.reimbursable ? 'reimbursable' : 'regular')}>
-              {Object.entries(PR_KIND_LABEL).map(([k, v]) => (
+            {/* Payment Requestors file a Request for payment; fund request (cash/check), auto debit and
+                reimbursable are chosen by the Fund Requestor (Ruth, 9 November). Older requests keep their type. */}
+            <select name="request_kind" defaultValue={currentKind}>
+              {kindChoices.map((k) => (
                 <option key={k} value={k}>
-                  {v}
+                  {PR_KIND_LABEL[k]}
                 </option>
               ))}
             </select>

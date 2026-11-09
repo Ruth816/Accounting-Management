@@ -375,6 +375,30 @@ select t.eq((select array[request_type::text, payment_method, region] from fund_
 select t.eq((select array[request_type::text, region] from fund_requests where id = (select v from ids where k='fkrb')),
             array['4', 'NCR'], 'reimbursable NCR gives fund type 4');
 
+-- Request for payment (Ruth, 9 November): requestor files, approver approves,
+-- Fund Requestor gets the fund request to complete.
+select t.as_user('req');
+insert into ids values ('krfp', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Supplier', 'purpose', 'Request for payment', 'date_required', '2026-11-01', 'terms_accepted', true,
+  'request_kind', 'request_for_payment', 'region', 'VisMin', 'approver_id', t.uid('appr'),
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 55)))));
+select t.eq((select request_kind || ' ' || reimbursable::text from payment_requests where id = (select v from ids where k='krfp')),
+            'request_for_payment false', 'request for payment is saved and is not reimbursable');
+select submit_payment_request((select v from ids where k='krfp'));
+select t.as_user('appr');
+select approve_payment_request((select v from ids where k='krfp'));
+select t.as_user('fr');
+insert into ids values ('fkrfp', t.fr_of((select v from ids where k='krfp')));
+select t.eq((select array[request_type::text, region, status::text] from fund_requests where id = (select v from ids where k='fkrfp')),
+            array['3', 'VisMin', 'in_funding_preparation'], 'approved request for payment reaches the Fund Requestor as a fund request');
+select set_fund_request_type((select v from ids where k='fkrfp'), 5::smallint);
+select t.eq((select request_type::text from fund_requests where id = (select v from ids where k='fkrfp')), '5', 'Fund Requestor sets the type to reimbursable');
+select set_fund_request_type((select v from ids where k='fkrfp'), 1::smallint);
+select t.eq((select request_type::text from fund_requests where id = (select v from ids where k='fkrfp')), '1', 'Fund Requestor sets the type to auto debit');
+select t.expect_error(format('select set_fund_request_type(%L, 2::smallint)', (select v from ids where k='fkrfp')), 'region');
+select t.as_user('req');
+select t.expect_error(format('select set_fund_request_type(%L, 3::smallint)', (select v from ids where k='fkrfp')), 'Fund Requestor role');
+
 -- Edit: take a waiting request back for editing.
 select t.as_user('req');
 insert into ids values ('wpr', save_payment_request(null, jsonb_build_object(

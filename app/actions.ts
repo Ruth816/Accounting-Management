@@ -74,7 +74,7 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     if (!no || !/^[1-9]\d*$/.test(no)) return { error: 'Enter the progress billing no. (1, 2, 3 …).' }
     payload.po_mode = `PB ${no}`
   }
-  payload.request_kind = str(fd, 'request_kind') ?? 'regular'
+  payload.request_kind = str(fd, 'request_kind') ?? 'request_for_payment'
   payload.reimbursable = payload.request_kind === 'reimbursable'
   payload.terms_accepted = fd.get('terms_accepted') === 'on'
   payload.edit_remarks = str(fd, 'edit_remarks')
@@ -142,6 +142,12 @@ export async function saveFundRequest(_: ActionState, fd: FormData): Promise<Act
     payload.original_amount = used.some((l) => l.amount.trim()) ? sum.toFixed(2) : null
     payload.category = used[0]?.category || null
     if (used[0]?.tax_code) payload.tax_code = used[0].tax_code
+  }
+  // The Fund Requestor chooses the type of a fund request from a payment request (Ruth, 9 November).
+  const requestType = str(fd, 'request_type')
+  if (requestType) {
+    const { error: eType } = await supabase.rpc('set_fund_request_type', { p_id: id, p_type: Number(requestType) })
+    if (eType) return { error: eType.message }
   }
   const { error } = await supabase.rpc('save_fund_request', { p_id: id, p: payload })
   if (error) return { error: error.message }
