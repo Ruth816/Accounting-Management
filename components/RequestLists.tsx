@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { GroupedFR, GroupedPR, REGIONS, RegionTabs, type Region, frRegion, parseRegion, prRegion } from './Grouped'
-import { FR_APPROVED_STATUSES, FR_OPEN_STATUSES, PR_DELETABLE, canBeMadeReady, canSubmitApprove } from '@/lib/labels'
+import { FR_APPROVED_STATUSES, FR_OPEN_STATUSES, PR_DELETABLE, PR_DELETABLE_BY_SELF_APPROVER, canBeMadeReady, canSubmitApprove } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Payment requests in the given statuses that the user may see. Other people's drafts stay hidden.
@@ -41,7 +41,10 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
         rows={rows}
         name={name}
         regions={reg === 'all' ? shown(REGIONS.filter((g) => rows.some((r) => prRegion(r) === g)), limited) : [reg]}
-        canDelete={(r) => PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))}
+        canDelete={(r) =>
+          (PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))) ||
+          (is('admin') && PR_DELETABLE_BY_SELF_APPROVER.includes(r.status) && r.requestor_id === me.id && r.approver_id === me.id)
+        }
         canEdit={(r) =>
           ((r.requestor_id === me.id || is('admin')) && ['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status)) ||
           (is('admin') && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))

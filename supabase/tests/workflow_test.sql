@@ -668,6 +668,27 @@ select approve_payment_request((select v from ids where k='selfpr'));
 select t.eq((select status::text <> 'pending_payment_approval' from payment_requests where id = (select v from ids where k='selfpr')), true, 'admin approves own request');
 select t.eq((select note from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Approved' order by id desc limit 1) like 'Self-approved%', true, 'own approval is flagged as self-approved');
 
+-- Only an Admin who is both requestor and approver may delete after approval (Ruth, 9 November).
+select t.as_user('fr');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='selfpr'), 'x'), 'Only the requestor or an Admin');
+select t.as_user('adm');
+select delete_payment_request((select v from ids where k='selfpr'), 'No longer needed');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='selfpr')), 'cancelled', 'Admin who requested and approved deletes after approval');
+select t.eq((select count(*)::int from fund_requests where payment_request_id = (select v from ids where k='selfpr') and status <> 'cancelled'), 0, 'its open fund request is cancelled with it');
+select t.eq((select count(*)::int from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Deleted' and note = 'No longer needed') >= 1, true, 'the delete is in the audit log');
+-- Not the requestor only: a request approved by someone else stays.
+select t.as_user('req');
+insert into ids values ('otherpr', save_payment_request(null, jsonb_build_object(
+  'payable_to', 'Other', 'purpose', 'P', 'date_required', '2026-11-09', 'terms_accepted', true, 'approver_id', t.uid('appr'),
+  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 10)))));
+select submit_payment_request((select v from ids where k='otherpr'));
+select t.as_user('appr');
+select approve_payment_request((select v from ids where k='otherpr'));
+select t.as_user('req');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='otherpr'), 'x'), 'cannot be deleted');
+select t.as_user('adm');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='otherpr'), 'x'), 'cannot be deleted');
+
 -- A Payment Approver cannot approve their own request, nor be a Payment Requestor too.
 reset role;
 select t.expect_error(format('update profiles set roles = %L where id = %L', '{payment_requestor,payment_approver}', t.uid('appr2')), 'cannot also be a Payment Requestor');
