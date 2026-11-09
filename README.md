@@ -74,4 +74,22 @@ PSQL="psql -h localhost -U postgres" npm run test:db   # the spec's acceptance c
 - A Ref no. used by a **cancelled** fund request can be used again.
 - New accounts start with **no roles** until an Admin assigns them.
 
-QuickBooks Online (Phases 2 and 3) is not built yet; approved fund requests stop at "Approved – Ready for QuickBooks".
+## QuickBooks Online (Phases 2 and 3)
+
+Code: `lib/qbo.ts` (sign-in, list sync, posting), `lib/qboExpense.ts` (fund request → Expense, tested in `lib/qboExpense.test.ts`), `app/api/quickbooks/*` (sign-in), migration `20261109000004_quickbooks_online.sql`.
+
+Set it up, sandbox first:
+
+1. At [developer.intuit.com](https://developer.intuit.com), sign in, **Create an app** → *QuickBooks Online and Payments*, scope **com.intuit.quickbooks.accounting**.
+2. In the app's **Development → Keys & credentials**, add the Redirect URI `https://<your site>/api/quickbooks/callback` (for example `https://aspencom-finance.app/api/quickbooks/callback`).
+3. In Vercel, add `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET` (the Development keys), `QBO_ENVIRONMENT=sandbox` and a long random `QBO_TOKEN_KEY`, then redeploy.
+4. In the portal, **Admin → QuickBooks Online → Connect to QuickBooks**, and pick the sandbox company. The dropdown lists sync straight away.
+5. When it works, get the **Production** keys (Intuit asks for an app questionnaire, and privacy policy and terms links), add the same Redirect URI under Production, change the three QBO variables to the production values, redeploy, **Disconnect** and **Connect** again with the real company.
+
+How it works:
+
+- **Lists (Phase 2):** categories (Expense, Other Expense and Cost of Goods Sold accounts), payment accounts (Bank, Credit Card and Other Current Asset accounts), payment methods and purchase tax codes come from QuickBooks every morning and on **Sync lists now**. Values QuickBooks no longer has are hidden, not deleted.
+- **Expenses (Phase 3):** the existing **Export to QuickBooks** / **Ready to import to QuickBooks** buttons create the Expense in QuickBooks once the request is funded: payee (found as a vendor, customer or employee, or added as a vendor), payment account and method, Ref no. as the reference number, memo, one line per item with its category and tax code (VAT-inclusive), the bank transfer fee as an extra *BANK CHARGES:Transfer & MC Fees* line with *No VAT (0%)*, and the attachments. The QuickBooks ID is stored and the request is locked.
+- **Errors:** the request goes to **Sync Failed** with QuickBooks' reason, the Fund Approver and Admins are notified, and exporting again retries. A retry first looks for an Expense with the same Ref no. and total, so it never creates a duplicate.
+- Without a connection, the buttons only mark requests as exported, as before.
+- The sign-in tokens are stored encrypted (`QBO_TOKEN_KEY`) in `qb_connection`, which only the server can read.

@@ -119,6 +119,12 @@ export default async function FundRequestPage({
         </div>
       </div>
 
+      {fr.status === 'sync_failed' && fr.qb_sync_error && (
+        <div className="msg error">
+          <strong>QuickBooks did not take this Expense:</strong> {fr.qb_sync_error} Fix it (an Admin can edit approved requests), then Export to QuickBooks again.
+        </div>
+      )}
+
       {fr.status === 'returned_to_fund_requestor' && fr.disapproval_reason && (
         <div className="msg warn">
           <strong>Returned by {name(fr.fund_approver_id)}:</strong> {fr.disapproval_reason}
