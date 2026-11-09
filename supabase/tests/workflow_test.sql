@@ -648,5 +648,27 @@ reset role;
 select t.expect_error(format('update profiles set roles = %L where id = %L', '{payment_requestor,payment_approver}', t.uid('appr2')), 'cannot also be a Payment Requestor');
 set role authenticated;
 
+-- Merge a duplicate account: its requests and history move to the kept account, then it can be deleted.
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values
+  (gen_random_uuid(), 'dup@x.test', '{"full_name":"Duplicate Person"}'),
+  (gen_random_uuid(), 'keep@x.test', '{"full_name":"Kept Person"}');
+update profiles set roles = '{payment_requestor}' where email in ('dup@x.test', 'keep@x.test');
+set role authenticated;
+select t.as_user('dup');
+insert into ids values ('duppr', save_payment_request(null, ('{"payable_to": "Dup Co", "purpose": "Dup", "date_required": "2026-11-09",
+  "items": [{"description": "Fee", "amount": "100"}], "billing_type": "VAT", "wtax_rate": "0", "terms_accepted": true}')::jsonb));
+select t.as_user('req2');
+select t.expect_error(format('select admin_merge_user(%L, %L)', t.uid('dup'), t.uid('keep')), 'Admin role');
+select t.as_user('adm');
+select t.expect_error(format('select admin_merge_user(%L, %L)', t.uid('dup'), t.uid('dup')), 'two different');
+select t.eq(admin_merge_user(t.uid('dup'), t.uid('keep')) >= 1, true, 'merge moves the old account''s records');
+select t.eq((select requestor_id from payment_requests where id = (select v from ids where k='duppr')), t.uid('keep'), 'request now belongs to the kept account');
+reset role;
+select t.eq((select active from profiles where id = t.uid('dup')), false, 'old account is made inactive');
+delete from auth.users where email = 'dup@x.test';
+select t.eq((select count(*)::int from profiles where email = 'dup@x.test'), 0, 'old account can then be deleted');
+set role authenticated;
+
 \o
 \echo ALL TESTS PASSED
