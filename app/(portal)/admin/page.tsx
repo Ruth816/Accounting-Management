@@ -2,12 +2,13 @@ import { EmployeeRegion } from '@/components/EmployeeRegion'
 import { redirect } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { ActionForm, Submit } from '@/components/ActionForm'
-import { adminCreateUser, adminHandOver, adminLookup, adminMergeUser, adminSetRoutes, sendQueuedSmsNow } from '@/app/actions'
+import { adminCreateUser, adminHandOver, adminLookup, adminMergeUser, adminSetRoutes, qbDisconnectNow, qbSyncNow, sendQueuedSmsNow } from '@/app/actions'
 import { getRoutes } from '@/lib/routes'
 import { usersByRole } from '@/lib/usersByRole'
 import { UserRow } from '@/components/UserRow'
 import { fmtDateTime } from '@/lib/format'
 import { smsCredit } from '@/lib/sms'
+import { qbConfigProblem, qbEnvironment, qbStatus } from '@/lib/qbo'
 import type { Lookup, Notification, Profile } from '@/lib/types'
 
 const LISTS: [Lookup['list'], string][] = [
@@ -17,10 +18,13 @@ const LISTS: [Lookup['list'], string][] = [
   ['tax_code', 'Tax codes'],
 ]
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ qb?: string; qb_error?: string }> }) {
   const { supabase, is } = await getMe()
   if (!is('admin')) redirect('/')
   const { name } = await getDirectory()
+  const { qb: qbFlash, qb_error: qbError } = await searchParams
+  const qbProblem = qbConfigProblem()
+  const qb = qbProblem ? null : await qbStatus().catch(() => null)
   const [{ data: users }, { data: lookups }, { data: sms }, credit] = await Promise.all([
     supabase.from('profiles').select('*').order('full_name'),
     supabase.from('lookups').select('*').order('list').order('sort'),
@@ -269,9 +273,55 @@ export default async function AdminPage() {
         </ActionForm>
       </section>
 
+      <section className="card" id="quickbooks">
+        <h2>QuickBooks Online</h2>
+        {qbFlash === 'connected' && <div className="msg ok">QuickBooks is connected and the dropdown lists were synced.</div>}
+        {qbError && <div className="msg error">{qbError}</div>}
+        {qbProblem ? (
+          <p className="small">Not set up yet. {qbProblem}</p>
+        ) : qb ? (
+          <>
+            <p>
+              Connected to <strong>{qb.company_name ?? `company ${qb.realm_id}`}</strong>
+              {qb.environment === 'sandbox' ? ' (sandbox: test company)' : ''} by {name(qb.connected_by)} on {fmtDateTime(qb.connected_at)}.
+            </p>
+            <p className="small">
+              Lists last synced: {qb.last_sync_at ? fmtDateTime(qb.last_sync_at) : 'not yet'}. They also sync every morning.
+              {qb.refresh_expires_at && <> The sign-in stays valid until {fmtDateTime(qb.refresh_expires_at)} and renews with each daily sync.</>}
+            </p>
+            {qb.last_sync_error && <div className="msg error">Last sync failed: {qb.last_sync_error}</div>}
+            <p className="small muted">
+              Export to QuickBooks now creates the Expense in QuickBooks, with the attachments, and stores its ID. If QuickBooks
+              refuses it, the request shows Sync Failed with the reason; fix it and export again.
+            </p>
+            <div className="row">
+              <ActionForm action={qbSyncNow}>
+                <Submit className="btn small">Sync lists now</Submit>
+              </ActionForm>
+              <ActionForm action={qbDisconnectNow} confirm="Disconnect QuickBooks? Export to QuickBooks will go back to marking requests for a manual import.">
+                <Submit className="btn secondary small">Disconnect</Submit>
+              </ActionForm>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="small">
+              Not connected. Connect once with a QuickBooks admin sign-in
+              {qbEnvironment() === 'sandbox' ? ' (sandbox: pick the test company first)' : ''}. Payment methods, payment
+              accounts, categories and tax codes then come from QuickBooks, and Export to QuickBooks posts each Expense.
+            </p>
+            <a className="btn small" href="/api/quickbooks/connect">Connect to QuickBooks</a>
+          </>
+        )}
+      </section>
+
       <section className="card">
         <h2>Dropdown lists</h2>
-        <p className="small muted">Phase 1 placeholders. Replace them with the real QuickBooks lists.</p>
+        <p className="small muted">
+          {qb
+            ? 'Synced from QuickBooks. Add or rename values in QuickBooks, then Sync lists now.'
+            : 'Copied from QuickBooks on 31 October. Once QuickBooks is connected they sync from it.'}
+        </p>
         <div className="lists">
           {LISTS.map(([list, title]) => (
             <div key={list}>

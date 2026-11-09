@@ -716,5 +716,37 @@ delete from auth.users where email = 'dup@x.test';
 select t.eq((select count(*)::int from profiles where email = 'dup@x.test'), 0, 'old account can then be deleted');
 set role authenticated;
 
+-- QuickBooks Online: list sync and recording the posting result.
+reset role;
+insert into fund_requests (request_type, fund_requestor_id, fund_approver_id, status, ref_no, locked)
+values (1, t.uid('fr'), t.uid('fa'), 'approved_ready_for_qb', 'QB-TEST-1', true)
+returning id as qbfr \gset
+set role authenticated;
+select t.as_user('req');
+select t.expect_error(format('select record_qb_result(%L, %L, null)', :'qbfr', '123'), 'Fund Approver|role');
+select t.expect_error('select qb_apply_lists(''{}''::jsonb)', 'permission denied');
+select t.expect_error('select * from qb_connection', 'permission denied');
+select t.as_user('fa');
+select record_qb_result(:'qbfr', null, 'Category "X" is not in QuickBooks.');
+select t.eq((select status::text from fund_requests where id = :'qbfr'), 'sync_failed', 'QuickBooks error sets Sync Failed');
+select t.eq((select qb_sync_error from fund_requests where id = :'qbfr'), 'Category "X" is not in QuickBooks.', 'the error is kept on the request');
+select record_qb_result(:'qbfr', '987', null);
+select t.eq((select status::text || ' ' || qb_txn_id from fund_requests where id = :'qbfr'), 'approved_posted_to_qb 987', 'retry posts and stores the QuickBooks ID');
+select t.eq((select qb_sync_error from fund_requests where id = :'qbfr'), null, 'the error is cleared');
+select record_qb_result(:'qbfr', '555', null);
+select t.eq((select qb_txn_id from fund_requests where id = :'qbfr'), '987', 'posting again never replaces the stored ID');
+reset role;
+set role service_role;
+select qb_apply_lists('{"category": [{"label": "OFFICE EXPENSES- Admin:Office Supplies", "qb_id": "77", "qb_type": "Expense"},
+                                    {"label": "New QB Category", "qb_id": "78", "qb_type": "Expense"}],
+                       "tax_code": [{"label": "12% S - Goods", "qb_id": "8", "rate": 0.12}],
+                       "payment_method": []}'::jsonb);
+reset role;
+select t.eq((select qb_id from lookups where list = 'category' and label = 'OFFICE EXPENSES- Admin:Office Supplies'), '77', 'sync stores the QuickBooks ID');
+select t.eq((select active from lookups where list = 'category' and label = 'New QB Category'), true, 'sync adds new QuickBooks values');
+select t.eq((select active from lookups where list = 'category' and label = 'Purchases'), false, 'sync hides values QuickBooks no longer has');
+select t.eq((select count(*) > 0 from lookups where list = 'payment_method' and active), true, 'an empty list from QuickBooks changes nothing');
+set role authenticated;
+
 \o
 \echo ALL TESTS PASSED

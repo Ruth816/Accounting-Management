@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dispatchQueuedSms } from '@/lib/sms'
+import { disconnect as qbDisconnect, postExpense, qbConnected, syncLists } from '@/lib/qbo'
 import type { ActionState } from '@/lib/types'
 
 const str = (fd: FormData, k: string) => {
@@ -174,9 +175,42 @@ export async function markPostedToQb(_: ActionState, fd: FormData): Promise<Acti
   const one = str(fd, 'one')
   const ids = one ? [one] : fd.getAll('ids').map(String)
   if (ids.length === 0) return { error: 'Tick at least one request.' }
-  const { data, error } = await supabase.rpc('mark_posted_to_qb', { p_ids: ids })
-  if (error) return { error: error.message }
-  return done(data === 1 ? 'Exported to QuickBooks and locked.' : `${data} requests exported to QuickBooks and locked.`)
+  return exportToQuickBooks(supabase, ids)
+}
+
+// "Export to QuickBooks": with QuickBooks connected, creates each Expense in
+// QuickBooks (Phase 3); otherwise only marks them exported for a manual import.
+type Db = Awaited<ReturnType<typeof createClient>>
+async function exportToQuickBooks(supabase: Db, ids: string[], verb = 'Exported to'): Promise<ActionState> {
+  if (!(await qbConnected())) {
+    const { data, error } = await supabase.rpc('mark_posted_to_qb', { p_ids: ids })
+    if (error) return { error: error.message }
+    return done(data === 1 ? `${verb} QuickBooks and locked.` : `${data} requests ${verb.toLowerCase()} QuickBooks and locked.`)
+  }
+  const { data: allowed } = await supabase.rpc('has_role', { r: 'fund_approver' })
+  if (!allowed) return { error: 'This needs the Fund Approver role.' }
+  const { data: rows } = await supabase.from('fund_requests').select('id, ref_no, status').in('id', ids)
+  const ready = (rows ?? []).filter((r) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed')
+  if (ready.length === 0) return { error: 'Tick at least one request that is ready for QuickBooks.' }
+
+  let posted = 0
+  const failed: string[] = []
+  for (const r of ready) {
+    try {
+      const { txnId, warning } = await postExpense(r.id)
+      const { error } = await supabase.rpc('record_qb_result', { p_id: r.id, p_txn_id: txnId, p_error: warning })
+      if (error) throw new Error(error.message)
+      posted++
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      await supabase.rpc('record_qb_result', { p_id: r.id, p_txn_id: null, p_error: msg })
+      failed.push(`${r.ref_no ?? 'Request'}: ${msg}`)
+    }
+  }
+  const okText = posted === 1 ? 'Posted to QuickBooks and locked.' : `${posted} requests posted to QuickBooks and locked.`
+  if (failed.length === 0) return done(okText)
+  done()
+  return { error: `${posted ? okText + ' ' : ''}Sync failed for ${failed.length}: ${failed.join(' | ')}` }
 }
 
 // Every other button: one dispatcher keyed by "op".
@@ -244,13 +278,10 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         const n = await call('mark_funded', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
         return done(n === 1 ? 'Marked as funded.' : `${n} requests marked as funded.`)
       }
-      case 'import_qb': {
-        const n = await call('mark_posted_to_qb', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
-        return done(n === 1 ? 'Imported to QuickBooks and locked.' : `${n} requests imported to QuickBooks and locked.`)
-      }
+      case 'import_qb':
+        return await exportToQuickBooks(supabase, (str(fd, 'ids') ?? '').split(',').filter(Boolean), 'Imported to')
       case 'post_qb':
-        await call('mark_posted_to_qb', { p_ids: [id] })
-        return done('Exported to QuickBooks and locked.')
+        return await exportToQuickBooks(supabase, id ? [id] : [])
       case 'quick_approve_fr':
         // Approve from the list: the confirm stands for ticking Reviewed (Ruth, 5 November).
         await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
@@ -461,6 +492,33 @@ export async function sendQueuedSmsNow(): Promise<ActionState> {
     const r = await dispatchQueuedSms(200)
     revalidatePath('/admin')
     return { ok: `Sent ${r.sent}, failed ${r.failed}.` }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+// Admin → QuickBooks
+export async function qbSyncNow(): Promise<ActionState> {
+  try {
+    await requireAdmin()
+    const counts = await syncLists()
+    revalidatePath('/', 'layout')
+    const n = (k: string) => counts?.[k] ?? 0
+    return {
+      ok: `Synced from QuickBooks: ${n('category')} categories, ${n('payment_account')} payment accounts, ${n('payment_method')} payment methods, ${n('tax_code')} tax codes.`,
+    }
+  } catch (e) {
+    revalidatePath('/admin')
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+export async function qbDisconnectNow(): Promise<ActionState> {
+  try {
+    await requireAdmin()
+    await qbDisconnect()
+    revalidatePath('/', 'layout')
+    return { ok: 'QuickBooks disconnected. Export to QuickBooks now only marks requests for a manual import.' }
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) }
   }
