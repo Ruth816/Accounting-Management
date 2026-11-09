@@ -118,6 +118,14 @@ export const PR_DELETABLE: string[] = [
   'expired',
 ]
 // Approved requests are registered and can no longer be deleted (Ruth, 5 November).
+// Except by an Admin who is both its requestor and its approver: they may
+// delete it up to the approved stage, until its fund request is approved (Ruth, 9 November).
+export const PR_DELETABLE_BY_SELF_APPROVER: string[] = [
+  'approved_awaiting_funding',
+  'in_funding_preparation',
+  'pending_fund_approval',
+  'returned_to_fund_requestor',
+]
 export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
 export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']
 
