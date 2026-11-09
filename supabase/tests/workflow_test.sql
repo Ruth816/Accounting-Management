@@ -380,10 +380,11 @@ select t.eq((select array[request_type::text, region] from fund_requests where i
 select t.as_user('req');
 insert into ids values ('krfp', save_payment_request(null, jsonb_build_object(
   'payable_to', 'Supplier', 'purpose', 'Request for payment', 'date_required', '2026-11-01', 'terms_accepted', true,
-  'request_kind', 'request_for_payment', 'region', 'VisMin', 'approver_id', t.uid('appr'),
+  'request_kind', 'request_for_payment', 'region', 'VisMin', 'approver_id', t.uid('appr'), 'other_notes', 'Call before delivery',
   'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 55)))));
 select t.eq((select request_kind || ' ' || reimbursable::text from payment_requests where id = (select v from ids where k='krfp')),
             'request_for_payment false', 'request for payment is saved and is not reimbursable');
+select t.eq((select other_notes from payment_requests where id = (select v from ids where k='krfp')), 'Call before delivery', 'other notes are saved');
 select submit_payment_request((select v from ids where k='krfp'));
 select t.as_user('appr');
 select approve_payment_request((select v from ids where k='krfp'));

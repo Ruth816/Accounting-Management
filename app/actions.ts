@@ -67,6 +67,7 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     'region', 'project_name', 'project_type', 'job_order_no', 'addendum_no', 'work_order_no',
     'approver_id', 'date_required', 'payable_to', 'payment_type', 'billing_type', 'currency', 'purpose',
     'po_num', 'po_date', 'po_amount', 'po_mode', 'last_payment_ref', 'wtax_rate', 'bank_transfer_fee',
+    'other_notes',
   ]
   const payload: Record<string, unknown> = Object.fromEntries(fields.map((k) => [k, str(fd, k)]))
   if (payload.po_mode === 'PB') {

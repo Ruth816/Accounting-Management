@@ -213,6 +213,9 @@ export function PaymentRequestForm({
           </button>
           <p className="small muted">Item no.: {itemNo(Math.max(filled, 1))}</p>
         </div>
+        <Field label="Other notes" hint="Anything else the approver and Fund Requestor should know">
+          <textarea name="other_notes" rows={3} defaultValue={pr?.other_notes ?? ''} />
+        </Field>
       </section>
 
       <section className="card">

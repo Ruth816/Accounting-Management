@@ -66,6 +66,7 @@ export interface PaymentRequest {
   billing_type: 'VAT' | 'Non-VAT' | 'Ack/R' | 'Pakyaw'
   currency: Currency
   purpose: string | null
+  other_notes?: string | null
   items: Item[]
   item_no: string | null
   po_num: string | null
