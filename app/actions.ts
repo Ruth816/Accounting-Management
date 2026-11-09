@@ -326,6 +326,33 @@ export async function adminUpdateUser(_: ActionState, fd: FormData): Promise<Act
   }
 }
 
+// Delete a user for good (Ruth, 9 November). Someone with requests, approvals or
+// history can't be deleted, because the records still name them; untick Active instead.
+export async function adminDeleteUser(_: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const supabase = await requireAdmin()
+    const id = str(fd, 'id')
+    if (!id) return { error: 'No user was chosen.' }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user?.id === id) return { error: 'You cannot delete your own account.' }
+    const admin = createAdminClient()
+    const { error } = await admin.auth.admin.deleteUser(id)
+    if (error) {
+      if (/database error|foreign key|violates/i.test(error.message))
+        return {
+          error:
+            'This user has requests or history in the portal, so they cannot be deleted. Untick Active and click Save to remove their access instead.',
+        }
+      return { error: error.message }
+    }
+    return done('User deleted.')
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 // Payment approval routing: NCR one step, VisMin up to two steps.
 export async function adminSetRoutes(_: ActionState, fd: FormData): Promise<ActionState> {
   try {
