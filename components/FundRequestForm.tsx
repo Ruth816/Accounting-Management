@@ -6,7 +6,7 @@ import { saveFundRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
 import { Field } from './PaymentRequestForm'
 import { chequeMemo, fundAmounts, money, parseAmount, refNoProblem } from '@/lib/calc'
-import { frTypeHelp, frTypeLabel } from '@/lib/labels'
+import { REQUEST_TYPE_LABEL, frRegionOf, frTypeHelp, frTypeLabel } from '@/lib/labels'
 import type { FundRequest, Lookup, Person } from '@/lib/types'
 
 export type ChequeOption = { id: string; cheque_no: string; total: number }
@@ -58,6 +58,11 @@ export function FundRequestForm({
   const [tax, setTax] = useState(fr.tax_code ?? '')
   const [payee, setPayee] = useState(fr.payee ?? '')
   const [refNo, setRefNo] = useState(fr.ref_no ?? '')
+  // From a payment request, the Fund Requestor picks the type (Ruth, 9 November):
+  // fund request (cash/check), auto debit or reimbursable, within the request's region.
+  const canPickType = !manual && !afterApproval
+  const typeChoices = frRegionOf(fr) === 'VisMin' ? [1, 3, 5] : [1, 2, 4]
+  const [requestType, setRequestType] = useState<number>(fr.request_type)
   const [mode, setMode] = useState<'none' | 'existing' | 'new'>(fr.cheque_id ? 'existing' : method === 'Check' ? 'new' : 'none')
   const [chequeId, setChequeId] = useState(fr.cheque_id ?? '')
   const [chequeNo, setChequeNo] = useState('')
@@ -106,7 +111,7 @@ export function FundRequestForm({
       : usesCheque && mode === 'new' && chequeNo
         ? chequeMemo(chequeNo, sub, sub)
         : ''
-  const refProblem = refNo ? refNoProblem(refNo, fr.request_type) : null
+  const refProblem = refNo ? refNoProblem(refNo, requestType) : null
 
   return (
     <form onSubmit={onSubmit} className="stack">
@@ -117,17 +122,27 @@ export function FundRequestForm({
         <section className="card">
           <h2>Expense details</h2>
           <div className="grid">
-            <Field label="Request type" hint={frTypeHelp(fr)}>
-              <input value={`${fr.request_type} · ${frTypeLabel(fr)}`} readOnly disabled />
+            <Field label="Request type" hint={canPickType ? 'Chosen by the Fund Requestor. The Ref no. starts with this number.' : frTypeHelp(fr)}>
+              {canPickType ? (
+                <select name="request_type" value={requestType} onChange={(e) => setRequestType(Number(e.target.value))}>
+                  {typeChoices.map((t) => (
+                    <option key={t} value={t}>
+                      {t} · {REQUEST_TYPE_LABEL[t]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input value={`${fr.request_type} · ${frTypeLabel(fr)}`} readOnly disabled />
+              )}
             </Field>
             <Field label="1. Type">
               <input value="Expense" readOnly disabled />
             </Field>
-            <Field label="2. Ref no. *" hint={refProblem ?? `Format ${fr.request_type}- YYYY MM NNNN`}>
+            <Field label="2. Ref no. *" hint={refProblem ?? `Format ${requestType}- YYYY MM NNNN`}>
               <input
                 name="ref_no"
                 value={refNo}
-                placeholder={`${fr.request_type}- 2026 10 0001`}
+                placeholder={`${requestType}- 2026 10 0001`}
                 onChange={(e) => setRefNo(e.target.value)}
                 aria-invalid={Boolean(refProblem)}
               />

@@ -101,6 +101,7 @@ export const PR_KIND_LABEL: Record<string, string> = {
   regular: 'Regular fund request (check payment & cash)',
   auto_debit: 'Auto debit (direct debit & MC)',
   reimbursable: 'Reimbursable fund request',
+  request_for_payment: 'Request for payment',
 }
 export const prKindLabel = (r: { request_kind?: string | null; reimbursable: boolean }) =>
   PR_KIND_LABEL[r.request_kind ?? (r.reimbursable ? 'reimbursable' : 'regular')]

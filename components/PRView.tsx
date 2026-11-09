@@ -70,6 +70,12 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
           </table>
         </div>
         <p className="small muted">Item no.: {pr.item_no}</p>
+        {pr.other_notes && (
+          <>
+            <h3>Other notes</h3>
+            <p className="pre">{pr.other_notes}</p>
+          </>
+        )}
       </section>
       {po.some(([, v]) => v) && (
         <section className="card">

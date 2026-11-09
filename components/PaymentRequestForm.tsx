@@ -58,6 +58,9 @@ export function PaymentRequestForm({
   const returned = pr?.status === 'returned_to_requestor'
   const filled = rows.filter((r) => r.description.trim() || r.amount.trim()).length
 
+  // Payment Requestors only file a Request for payment; the fund types are chosen on the
+  // Fund Requestor's page (Ruth, 9 November). An Admin correcting an approved request keeps its type.
+  const kind = afterApproval && pr ? pr.request_kind ?? (pr.reimbursable ? 'reimbursable' : 'regular') : 'request_for_payment'
   const setRow = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   return (
@@ -76,13 +79,8 @@ export function PaymentRequestForm({
             <input value={requestorName} readOnly disabled />
           </Field>
           <Field label="Request type">
-            <select name="request_kind" defaultValue={pr?.request_kind ?? (pr?.reimbursable ? 'reimbursable' : 'regular')}>
-              {Object.entries(PR_KIND_LABEL).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
+            <input type="hidden" name="request_kind" value={kind} />
+            <input value={PR_KIND_LABEL[kind]} readOnly aria-readonly />
           </Field>
           <Field label="Region" hint={lockedRegion ? `You file ${lockedRegion} requests only` : undefined}>
             {lockedRegion ? (
@@ -209,6 +207,9 @@ export function PaymentRequestForm({
           </button>
           <p className="small muted">Item no.: {itemNo(Math.max(filled, 1))}</p>
         </div>
+        <Field label="Other notes" hint="Anything else the approver and Fund Requestor should know">
+          <textarea name="other_notes" rows={3} defaultValue={pr?.other_notes ?? ''} />
+        </Field>
       </section>
 
       <section className="card">

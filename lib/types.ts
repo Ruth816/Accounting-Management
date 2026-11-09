@@ -50,7 +50,7 @@ export interface PaymentRequest {
   status: Status
   version: number
   reimbursable: boolean
-  request_kind: 'regular' | 'auto_debit' | 'reimbursable'
+  request_kind: 'regular' | 'auto_debit' | 'reimbursable' | 'request_for_payment'
   approval_level: number
   first_approver_id: string | null
   first_approved_on: string | null
@@ -66,6 +66,7 @@ export interface PaymentRequest {
   billing_type: 'VAT' | 'Non-VAT' | 'Ack/R' | 'Pakyaw'
   currency: Currency
   purpose: string | null
+  other_notes?: string | null
   items: Item[]
   item_no: string | null
   po_num: string | null

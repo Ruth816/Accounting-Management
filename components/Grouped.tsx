@@ -9,16 +9,17 @@ import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 export type Region = 'NCR' | 'VisMin'
 export const REGIONS: Region[] = ['NCR', 'VisMin']
-type Kind = 'regular' | 'auto' | 'reimb'
+type Kind = 'regular' | 'auto' | 'reimb' | 'rfp'
 const KIND_LABEL: Record<Kind, string> = {
   regular: PR_KIND_LABEL.regular,
   auto: PR_KIND_LABEL.auto_debit,
   reimb: PR_KIND_LABEL.reimbursable,
+  rfp: PR_KIND_LABEL.request_for_payment,
 }
 
 export const prRegion = (r: PaymentRequest): Region => (r.region === 'VisMin' ? 'VisMin' : 'NCR')
 const prKind = (r: PaymentRequest): Kind =>
-  r.request_kind === 'auto_debit' ? 'auto' : r.request_kind === 'reimbursable' || r.reimbursable ? 'reimb' : 'regular'
+  r.request_kind === 'request_for_payment' ? 'rfp' : r.request_kind === 'auto_debit' ? 'auto' : r.request_kind === 'reimbursable' || r.reimbursable ? 'reimb' : 'regular'
 // Fund request types: 1 auto debit, 2 NCR regular, 3 VisMin regular,
 // 4 NCR reimbursable, 5 VisMin reimbursable. Region comes from the payment
 // request; a standalone auto debit or check payment request has none and is listed under NCR.
@@ -72,7 +73,7 @@ export function GroupedPR({
   canEdit?: (r: PaymentRequest) => boolean
   canApprove?: (r: PaymentRequest) => boolean
 }) {
-  const kinds: Kind[] = ['regular', 'auto', 'reimb']
+  const kinds: Kind[] = ['rfp', 'regular', 'auto', 'reimb']
   return (
     <>
       {regions.map((reg) => {
@@ -84,6 +85,8 @@ export function GroupedPR({
             </h2>
             {kinds.map((k) => {
               const rs = inRegion.filter((r) => prKind(r) === k)
+              // Payment requests are now all Requests for payment; the older types show only while they have requests.
+              if (k !== 'rfp' && rs.length === 0) return null
               const total = fmtTotals(rs.reduce<Record<string, number>>((t, r) => ({ ...t, [r.currency]: (t[r.currency] ?? 0) + Number(r.total_due ?? 0) }), {}))
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>
