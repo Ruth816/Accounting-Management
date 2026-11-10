@@ -189,7 +189,7 @@ export default async function PaymentRequestPage({
         <section className="card">
           <h2>Funding</h2>
           <ActionForm action={requestAction} hidden={{ op: 'receive', id: pr.id }}>
-            <Submit>Receive and prepare fund request</Submit>
+            <Submit>Prepare fund request</Submit>
           </ActionForm>
         </section>
       )}

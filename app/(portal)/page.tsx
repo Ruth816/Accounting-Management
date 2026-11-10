@@ -51,7 +51,7 @@ export default async function Dashboard() {
   if (is('payment_approver')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting approval', href: '#approve-pr' })
   if (is('fund_approver')) action.push({ value: toFundApprove?.data?.length ?? 0, label: 'fund requests awaiting your approval', href: '#approve-fr' })
   if (is('fund_requestor')) {
-    action.push({ value: toReceive?.data?.length ?? 0, label: 'approved requests to receive for funding', href: '#receive' })
+    action.push({ value: toReceive?.data?.length ?? 0, label: 'payment requests to prepare for fund request', href: '#receive' })
     action.push({ value: frPreparing.filter((f) => f.status === 'returned_to_fund_requestor').length, label: 'fund requests returned to you', href: '#preparing' })
     progress.push({ value: frPreparing.filter((f) => f.status === 'in_funding_preparation').length, label: 'fund requests in preparation', href: '#preparing' })
   }
@@ -142,11 +142,12 @@ export default async function Dashboard() {
 
       {is('fund_requestor') && (
         <>
-          <Queue id="receive" title="Approved, ready to receive for funding" count={toReceive?.data?.length}>
+          {/* Approved payment requests wait here for the Fund Requestor (Ruth, 10 November). */}
+          <Queue id="receive" title="Prepare for fund request" count={toReceive?.data?.length}>
             {toReceive?.data?.length ? (
               <SummaryPR rows={toReceive.data as PaymentRequest[]} base="/payment-requests/approved" />
             ) : (
-              <p className="muted">No approved requests waiting.</p>
+              <p className="muted">No approved payment requests waiting to be prepared.</p>
             )}
           </Queue>
           <Queue
