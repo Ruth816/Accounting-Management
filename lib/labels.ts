@@ -43,7 +43,8 @@ export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 // What each self-started fund request type is for (Ruth, 1 November).
 export const AUTO_DEBIT_HELP =
   "Paid straight from the disbursement account with no cheque issued: manager's check (MC), auto deduct, or direct payment to an account."
-export const CHECK_PAYMENT_HELP = 'Paid by cheque: the funds are withdrawn, or someone is paid, using a cheque.'
+export const FUND_REQUEST_HELP = 'Paid by cheque for the NCR or VisMin region: the funds are withdrawn, or someone is paid, using a cheque.'
+export const REIMBURSABLE_HELP = 'Like a fund request, for spending that is to be reimbursed.'
 
 export const REQUEST_TYPE_LABEL: Record<number, string> = {
   1: 'Auto debit request',
@@ -73,15 +74,19 @@ export function poModeLabel(mode: string | null) {
   return PO_MODE_LABEL[code] ?? mode
 }
 
-// A type 2 request started by a Fund Requestor (no payment request) is a
-// Check payment request; one received from a payment request is an NCR fund request.
+// The five fund request types (Ruth, 10 November). The old Check payment
+// request (type 2 with no payment request) is now an NCR fund request.
 type FRType = { request_type: number; payment_request_id: string | null }
 export function frTypeLabel(f: FRType) {
-  return f.request_type === 2 && !f.payment_request_id ? 'Check payment request' : REQUEST_TYPE_LABEL[f.request_type]
+  return REQUEST_TYPE_LABEL[f.request_type]
 }
 export function frTypeHelp(f: FRType) {
   if (f.payment_request_id) return undefined
-  return f.request_type === 1 ? AUTO_DEBIT_HELP : f.request_type === 2 ? CHECK_PAYMENT_HELP : undefined
+  return f.request_type === 1 ? AUTO_DEBIT_HELP : f.request_type >= 4 ? REIMBURSABLE_HELP : FUND_REQUEST_HELP
+}
+// Types a Fund Requestor may start: all five, or only their region's.
+export function newFundRequestTypes(region: 'NCR' | 'VisMin' | null) {
+  return region === 'VisMin' ? [1, 3, 5] : region === 'NCR' ? [1, 2, 4] : [1, 2, 3, 4, 5]
 }
 
 // Sidebar lists: before and after each approval stage.

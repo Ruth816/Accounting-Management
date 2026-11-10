@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AUTO_DEBIT_HELP, CHECK_PAYMENT_HELP, canSubmitApprove } from '@/lib/labels'
+import { AUTO_DEBIT_HELP, FUND_REQUEST_HELP, REIMBURSABLE_HELP, REQUEST_TYPE_LABEL, canSubmitApprove, newFundRequestTypes } from '@/lib/labels'
 import { getMe } from '@/lib/auth'
 import { FRTable } from '@/components/Tables'
 import { todayManila } from '@/lib/summary'
@@ -11,7 +11,7 @@ import type { FundRequest, PaymentRequest } from '@/lib/types'
 const WORKFLOW_ROLES = ['payment_requestor', 'payment_approver', 'fund_requestor', 'fund_approver'] as const
 
 export default async function Dashboard() {
-  const { supabase, me, is } = await getMe()
+  const { supabase, me, is, myRegion } = await getMe()
 
   const headCount = (status: string[]) =>
     supabase.from('payment_requests').select('id', { count: 'exact', head: true }).in('status', status)
@@ -155,9 +155,13 @@ export default async function Dashboard() {
             count={preparing?.data?.length}
             action={
               <ActionForm action={requestAction} className="row">
-                <select name="op" aria-label="Fund request type" defaultValue="new_auto_debit">
-                  <option value="new_auto_debit">1 · Auto debit request</option>
-                  <option value="new_check_payment">2 · Check payment request</option>
+                <input type="hidden" name="op" value="new_fund_request" />
+                <select name="request_type" aria-label="Fund request type" defaultValue="1">
+                  {newFundRequestTypes(myRegion).map((t) => (
+                    <option key={t} value={t}>
+                      {t} · {REQUEST_TYPE_LABEL[t]}
+                    </option>
+                  ))}
                 </select>
                 <Submit className="btn small">New fund request</Submit>
               </ActionForm>
@@ -168,7 +172,10 @@ export default async function Dashboard() {
                 <strong>Auto debit request:</strong> {AUTO_DEBIT_HELP}
               </li>
               <li>
-                <strong>Check payment request:</strong> {CHECK_PAYMENT_HELP}
+                <strong>Fund request:</strong> {FUND_REQUEST_HELP}
+              </li>
+              <li>
+                <strong>Reimbursable fund request:</strong> {REIMBURSABLE_HELP}
               </li>
             </ul>
             <FRTable rows={frPreparing} empty="Nothing in preparation." canApprove={(f) => canSubmitApprove(f, is, me.id)} />
