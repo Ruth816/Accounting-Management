@@ -623,6 +623,10 @@ select set_funded((select v from ids where k='fr2'), true, date '2026-10-28');
 select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-28', 'date funded can be before approval');
 select t.eq((select count(*)::int from notifications where fund_request_id = (select v from ids where k='fr2')
                and message like '%was funded on Oct 28, 2026.'), 1, 'requestor is told the date funded');
+select t.eq((select count(*)::int from notifications where fund_request_id = (select v from ids where k='fr2')
+               and message like '%is now available. Please go to the Finance office.'), 1, 'payment requestor is told to collect it');
+select t.eq((select count(*)::int from notifications where payment_request_id = (select v from ids where k='pr')
+               and message like '%is funded (Ref no.%'), 0, 'approval no longer says funded');
 select set_funded((select v from ids where k='fr2'), true, date '2026-10-30');
 select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-30', 'date funded can be changed');
 select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')

@@ -7,7 +7,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   returned_to_requestor: 'Returned to Requestor',
   expired: 'Expired',
   cancelled: 'Cancelled',
-  approved_awaiting_funding: 'Approved – Awaiting Funding',
+  approved_awaiting_funding: 'Approved – Preparing for Fund request', // Ruth, 10 November
   in_funding_preparation: 'In Funding Preparation',
   pending_fund_approval: 'Pending Fund Approval',
   returned_to_fund_requestor: 'Returned to Fund Requestor',

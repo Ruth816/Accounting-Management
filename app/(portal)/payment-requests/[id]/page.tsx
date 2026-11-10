@@ -87,7 +87,12 @@ export default async function PaymentRequestPage({
         <div>
           <h1>Payment request {pr.req_no}</h1>
           <div className="row status-actions">
-            <StatusBadge status={pr.status} />
+            {fr?.funded_at && pr.status === 'approved_awaiting_funding' ? (
+              // Funded: the requestor can collect it (Ruth, 10 November).
+              <span className="badge good">Funded{fr.funded_on ? ` ${fmtDate(fr.funded_on)}` : ''} – available at the Finance office</span>
+            ) : (
+              <StatusBadge status={pr.status} />
+            )}
             {canEditApproved && !afterApproval && (
               <Link className="btn secondary small" href={`/payment-requests/${pr.id}?edit=1`}>
                 Edit

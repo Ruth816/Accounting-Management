@@ -41,6 +41,11 @@ begin
     perform notify(f.fund_requestor_id,
       format('Fund request %s was funded on %s.', f.ref_no, to_char(p_date, 'Mon FMDD, YYYY')),
       f.payment_request_id, f.id);
+    -- The payment requestor can now collect it (Ruth, 10 November).
+    perform notify((select requestor_id from payment_requests where id = f.payment_request_id),
+      format('Your payment request %s is now available. Please go to the Finance office.',
+             (select req_no from payment_requests where id = f.payment_request_id)),
+      f.payment_request_id, f.id);
   elsif f.funded_on is distinct from p_date then
     update fund_requests set funded_on = p_date where id = f.id;
     perform log_event(f.payment_request_id, f.id, 'Date funded changed', f.status, f.status,
@@ -100,3 +105,32 @@ create trigger fr_ready_on_approval before update of status on fund_requests
 update fund_requests
    set ready_for_funding_at = coalesce(approved_on, now()), ready_for_funding_by = approved_by
  where status in ('approved_ready_for_qb', 'sync_failed') and ready_for_funding_at is null;
+
+-- Approval no longer tells the payment requestor it is funded: that message
+-- now comes when the Fund Approver ticks Funded (Ruth, 10 November).
+create or replace function approve_fund_request(p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := require_role('fund_approver');
+  f fund_requests;
+  pr_requestor uuid;
+begin
+  select * into f from fund_requests where id = p_id for update;
+  if not found or (f.fund_approver_id <> uid and f.fund_requestor_id <> uid and not has_role('admin')) then raise exception 'Fund request not found.'; end if;
+  select requestor_id into pr_requestor from payment_requests where id = f.payment_request_id;
+  if f.status <> 'pending_fund_approval' then raise exception 'This fund request is not waiting for approval.'; end if;
+  if not f.reviewed then raise exception 'Tick Reviewed before approving.'; end if;
+
+  update fund_requests set status = 'approved_ready_for_qb', approved_by = uid, approved_on = now(),
+    locked = true, disapproval_reason = null
+  where id = f.id;
+  perform log_event(f.payment_request_id, f.id, 'Fund approved', f.status, 'approved_ready_for_qb',
+    case when uid = f.fund_requestor_id or uid = pr_requestor
+         then 'Self-approved: the approver also prepared or requested this fund request' end);
+  perform notify(f.fund_requestor_id, format('Fund request %s was approved.', f.ref_no), f.payment_request_id, f.id);
+  perform notify(pr_requestor,
+    format('Your payment request %s was approved for funding (Ref no. %s).',
+           (select req_no from payment_requests where id = f.payment_request_id), f.ref_no),
+    f.payment_request_id, f.id);
+end $$;
+
