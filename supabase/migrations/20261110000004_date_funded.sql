@@ -134,3 +134,34 @@ begin
     f.payment_request_id, f.id);
 end $$;
 
+
+-- Fund Requestors edit until approval, not until funded (Ruth, 10 November):
+-- once approved, only the Fund Approver (or an Admin) corrects it.
+create or replace function fund_request_edit_mode(f fund_requests) returns text
+language plpgsql stable security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  v_staff boolean := has_role('admin') or has_role('fund_approver');
+begin
+  if uid is null or f.status in ('cancelled', 'approved_posted_to_qb') then return null; end if;
+  if not f.locked and f.status in ('in_funding_preparation', 'returned_to_fund_requestor') then
+    return case when v_staff or has_role('fund_requestor') then 'prep' end;
+  end if;
+  -- Sent or approved: staff save in place; a requestor takes theirs back
+  -- first while it waits for approval (withdraw_fund_request).
+  if f.status in ('pending_fund_approval', 'approved_ready_for_qb', 'sync_failed') and v_staff then
+    return 'in_place';
+  end if;
+  return null;
+end $$;
+
+create or replace function fund_request_edit_refusal(f fund_requests) returns text
+language sql stable as $$
+  select case
+    when f.status = 'approved_posted_to_qb' then 'Posted to QuickBooks: this request can no longer be edited.'
+    when f.status = 'cancelled' then 'This fund request is cancelled.'
+    when f.status in ('approved_ready_for_qb', 'sync_failed') then 'This fund request is already approved. Only an Admin or a Fund Approver can edit it now.'
+    when f.status = 'pending_fund_approval' then 'This fund request is waiting for approval. Take it back for editing first.'
+    else 'Only its Fund Requestor, an Admin or a Fund Approver can edit this fund request.'
+  end;
+$$;

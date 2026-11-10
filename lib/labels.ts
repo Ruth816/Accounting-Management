@@ -153,8 +153,8 @@ export function frStatusLabel(f: FRStage) {
 //   prep      being prepared: edit, then send for approval;
 //   in_place  already sent or approved: save changes with remarks, the status stays;
 //   withdraw  its requestor's own request waiting for approval: take it back first.
-// A Fund Requestor may edit their own request until it is funded; an Admin or
-// a Fund Approver may edit every request at any stage. Cancelled requests and
+// A Fund Requestor may edit their own request until it is approved (Ruth,
+// 10 November); after that only an Admin or a Fund Approver corrects it. Cancelled requests and
 // requests exported to QuickBooks stay locked.
 export type FREditMode = 'prep' | 'in_place' | 'withdraw' | null
 type FREditable = { status: Status; locked?: boolean | null; fund_requestor_id: string; funded_at?: string | null }
@@ -167,8 +167,7 @@ export function frEditMode(f: FREditable, is: (role: Role) => boolean, meId: str
   if (!['pending_fund_approval', 'approved_ready_for_qb', 'sync_failed'].includes(f.status)) return null
   if (staff) return 'in_place'
   if (!is('fund_requestor') || f.fund_requestor_id !== meId) return null
-  if (f.status === 'pending_fund_approval') return 'withdraw'
-  return f.funded_at ? null : 'in_place'
+  return f.status === 'pending_fund_approval' ? 'withdraw' : null
 }
 
 // Admins and Fund Approvers who also prepare fund requests can send and approve their own in one click (Ruth, 5 November).

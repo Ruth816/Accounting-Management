@@ -167,12 +167,12 @@ export default async function FundRequestPage({
           {canEditInPlace && (
             <p className="muted small">
               {approved ? 'Approved' : 'Waiting for approval'}: it can still be corrected (Edit, with remarks)
-              {is('admin') || is('fund_approver') ? ' until it is exported to QuickBooks' : ' until it is funded'}.
+ until it is exported to QuickBooks.
               {approved && <> It can&apos;t be deleted.</>}
             </p>
           )}
-          {approved && !postedToQb && !canEditInPlace && fr.funded_at && (
-            <p className="muted small">Funded: only an Admin or a Fund Approver can correct it now.</p>
+          {approved && !postedToQb && !canEditInPlace && (
+            <p className="muted small">Approved: only an Admin or a Fund Approver can correct it now.</p>
           )}
           {postedToQb && <p className="muted small">Exported to QuickBooks: locked, no more edits or deletion.</p>}
           {(() => {
