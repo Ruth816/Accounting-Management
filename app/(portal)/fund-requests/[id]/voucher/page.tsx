@@ -3,6 +3,7 @@ import { getMe } from '@/lib/auth'
 import { FRView } from '@/components/FRView'
 import { PrintButton } from '@/components/PrintButton'
 import { fmtDate } from '@/lib/format'
+import { canSeeVoucher } from '@/lib/labels'
 import type { FundRequest } from '@/lib/types'
 
 type Voucher = {
@@ -21,14 +22,15 @@ type Voucher = {
 }
 
 // Approval record (spec 5.8). "Print / Save as PDF" gives the PDF.
+// Fund Requestors get it once the request is ready for funding (Ruth, 10 November).
 export default async function VoucherPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { supabase } = await getMe()
+  const { supabase, is } = await getMe()
   const { data, error } = await supabase.rpc('get_voucher', { p_id: id })
   if (error || !data) notFound()
   const v = data as Voucher
   const fr = v.fund_request
-  if (!fr.locked) notFound()
+  if (!canSeeVoucher(fr, is)) notFound()
 
   const signatures: [string, string | null, string | null][] = [
     ['Payment requested', v.payment_requested_by, v.payment_requested_on],

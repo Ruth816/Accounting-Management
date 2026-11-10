@@ -606,12 +606,21 @@ set role authenticated;
 -- Mark posted to QuickBooks from the funding summary.
 select t.as_user('fr');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'role');
+-- Vouchers (Ruth, 10 November): a Fund Requestor gets it once ready for
+-- funding, which is now straight after approval.
+select t.eq((get_voucher((select v from ids where k='fr2')) ->> 'fund_prepared_by') is not null, true, 'Fund Requestor sees the voucher after approval');
 select t.as_user('adm');
+select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'Admin sees the voucher from fund approval');
 -- Stages (Ruth, 5 November): ready for funding, then funded, then QuickBooks.
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
 -- Approved for funding goes straight to Ready for funding (Ruth, 10 November).
 select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'approval puts it on Ready for funding');
 select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
+select t.as_user('fr');
+select t.eq((get_voucher((select v from ids where k='fr2')) ->> 'fund_prepared_by') is not null, true, 'Fund Requestor sees the voucher once ready for funding');
+select t.as_user('req');
+select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'its Payment Requestor sees it too');
+select t.as_user('adm');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
 -- Tick each request funded with the true date funded (Ruth, 10 November).
 select t.expect_error(format('select set_funded(%L, true, null)', (select v from ids where k='fr2')), 'Enter the date funded');

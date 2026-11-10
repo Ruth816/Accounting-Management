@@ -1,7 +1,7 @@
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { canSubmitApprove, frEditMode } from '@/lib/labels'
+import { canSeeVoucher, canSubmitApprove, frEditMode } from '@/lib/labels'
 import { EditButton } from '@/components/EditButton'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
@@ -101,7 +101,7 @@ export default async function FundRequestPage({
               Payment request {pr.req_no}
             </Link>
           )}
-          {approved && (
+          {canSeeVoucher(fr, is) && (
             <Link href={`/fund-requests/${fr.id}/voucher`} className="btn small">
               Voucher
             </Link>
