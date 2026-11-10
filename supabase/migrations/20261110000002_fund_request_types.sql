@@ -4,7 +4,8 @@
 -- Types 2 to 5 take the region of their type and start as Check, like the old
 -- Check payment request (type 2, NCR), which is now listed as NCR fund request.
 -- A Fund Requestor limited to one region can't start the other region's types
--- (lock_fr_region raises "This request belongs to another region.").
+-- (lock_fr_region raises "This request belongs to another region."), and a
+-- VisMin Fund Requestor starts only 3 and 5, no auto debit (Ruth, 10 November).
 create or replace function create_fund_request(p_type smallint) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -14,6 +15,9 @@ declare
 begin
   if p_type is null or p_type not between 1 and 5 then
     raise exception 'Pick a request type from 1 to 5.';
+  end if;
+  if p_type = 1 and my_region() = 'VisMin' then
+    raise exception 'VisMin Fund Requestors start a VisMin fund request (3 or 5), not an auto debit request.';
   end if;
   select default_fund_approver into v_approver from profiles where id = uid;
   if v_approver = uid then v_approver := null; end if;

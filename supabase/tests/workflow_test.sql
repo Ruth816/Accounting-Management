@@ -533,6 +533,16 @@ select t.eq((select region from fund_requests where id = (select v from ids wher
 select t.expect_error('select create_fund_request(5::smallint)', 'another region');
 insert into ids values ('nt2', create_fund_request(2::smallint));
 select t.eq((select region from fund_requests where id = (select v from ids where k='nt2')), 'NCR', 'NCR fund requestor starts an NCR fund request');
+reset role;
+update profiles set region = 'VisMin' where email = 'fr@x.test';
+set role authenticated;
+select t.as_user('fr');
+select t.expect_error('select create_fund_request(1::smallint)', 'not an auto debit');
+insert into ids values ('nt5', create_fund_request(5::smallint));
+select t.eq((select region from fund_requests where id = (select v from ids where k='nt5')), 'VisMin', 'VisMin fund requestor starts a VisMin reimbursable fund request');
+reset role;
+update profiles set region = 'NCR' where email = 'fr@x.test';
+set role authenticated;
 select t.as_user('adm');
 insert into ids values ('vfr', t.fr_of((select v from ids where k='rv')));
 select t.as_user('fr');
