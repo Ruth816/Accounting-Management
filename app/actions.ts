@@ -242,6 +242,12 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         const n = await call('mark_funded', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
         return done(n === 1 ? 'Marked as funded.' : `${n} requests marked as funded.`)
       }
+      case 'set_funded': {
+        // Tick one request as funded with its true date funded (Ruth, 10 November).
+        const funded = fd.get('funded') === 'true'
+        await call('set_funded', { p_id: id, p_funded: funded, p_date: funded ? str(fd, 'funded_on') : null })
+        return done(funded ? 'Funded and date funded saved.' : 'Funded tick cleared.')
+      }
       case 'import_qb': {
         const n = await call('mark_posted_to_qb', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
         return done(n === 1 ? 'Imported to QuickBooks and locked.' : `${n} requests imported to QuickBooks and locked.`)

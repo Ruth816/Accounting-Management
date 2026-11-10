@@ -617,7 +617,22 @@ select mark_ready_for_funding((select v from ids where k='fr2'));
 select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'Ready for funding puts it on the funding list');
 select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
+-- Tick each request funded with the true date funded (Ruth, 10 November).
+select t.expect_error(format('select set_funded(%L, true, null)', (select v from ids where k='fr2')), 'Enter the date funded');
+select t.expect_error(format('select set_funded(%L, true, %L)', (select v from ids where k='fr2'), current_date + 5), 'later than today');
+select set_funded((select v from ids where k='fr2'), true, date '2026-10-28');
+select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-28', 'date funded can be before approval');
+select set_funded((select v from ids where k='fr2'), true, date '2026-10-30');
+select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-30', 'date funded can be changed');
+select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')
+               and action = 'Date funded changed'), 1, 'date change is logged');
+select set_funded((select v from ids where k='fr2'), false);
+select t.eq((select funded_at is null and funded_on is null from fund_requests where id = (select v from ids where k='fr2')), true, 'Funded tick can be cleared');
+select t.as_user('fr');
+select t.expect_error(format('select set_funded(%L, true, current_date)', (select v from ids where k='fr2')), 'Fund Approver');
+select t.as_user('adm');
 select t.eq(mark_funded(array[(select v from ids where k='fr2')]), 1, 'marks the day funded');
+select t.eq((select funded_on is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'bulk funding records a date funded');
 -- Once funded, only an Admin or a Fund Approver can edit it (Ruth, 10 November).
 select t.as_user('fr');
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='fr2'),

@@ -30,6 +30,7 @@ export type SummaryRow = {
   payDate: string | null
   reqNo: string // payment request REQ No., when the fund request came from one
   funded: boolean
+  fundedOn: string | null // the true date funded, typed by the Fund Approver
 }
 
 export type Totals = Record<string, number> // per currency
@@ -47,7 +48,7 @@ type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel
 export const KIND_INFO: Record<SummaryKind, KindInfo> = {
   funding: {
     title: 'Ready for funding',
-    sub: 'Requests you marked Ready for funding, with totals per day, region and type of request. Send out the funds, mark the day as funded, then import it to QuickBooks.',
+    sub: 'Requests you marked Ready for funding, with totals per day, region and type of request. Send out the funds, tick each request as funded with the date it was funded, then import it to QuickBooks.',
     role: 'fund_approver',
     amountLabel: 'Amount to fund (PHP)',
     accountLabel: 'Payment account',
@@ -128,6 +129,7 @@ export async function loadYear(kind: SummaryKind, year: number, approver: string
     payDate: f.payment_date ?? null,
     reqNo: '',
     funded: Boolean(f.funded_at),
+    fundedOn: f.funded_on ?? null,
   })
 
   if (kind === 'funding') {
