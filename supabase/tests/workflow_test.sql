@@ -609,13 +609,23 @@ set role authenticated;
 -- Mark posted to QuickBooks from the funding summary.
 select t.as_user('fr');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'role');
+-- Vouchers (Ruth, 10 November): a Fund Requestor gets it once ready for funding.
+select t.expect_error(format('select get_voucher(%L)', (select v from ids where k='fr2')), 'once the fund request is ready for funding');
+select t.as_user('req');
+select t.expect_error(format('select get_voucher(%L)', (select v from ids where k='fr2')), 'once the fund request is ready for funding');
 select t.as_user('adm');
+select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'Admin sees the voucher from fund approval');
 -- Stages (Ruth, 5 November): ready for funding, then funded, then QuickBooks.
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
 select t.expect_error(format('select mark_funded(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Nothing on this day');
 select mark_ready_for_funding((select v from ids where k='fr2'));
 select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'Ready for funding puts it on the funding list');
 select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
+select t.as_user('fr');
+select t.eq((get_voucher((select v from ids where k='fr2')) ->> 'fund_prepared_by') is not null, true, 'Fund Requestor sees the voucher once ready for funding');
+select t.as_user('req');
+select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'its Payment Requestor sees it too');
+select t.as_user('adm');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
 select t.eq(mark_funded(array[(select v from ids where k='fr2')]), 1, 'marks the day funded');
 -- Once funded, only an Admin or a Fund Approver can edit it (Ruth, 10 November).

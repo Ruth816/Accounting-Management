@@ -108,6 +108,7 @@ export function GroupedFR({
   canEdit,
   canMarkReady,
   canApprove,
+  canVoucher,
 }: {
   rows: FundRequest[]
   regions?: Region[]
@@ -115,6 +116,7 @@ export function GroupedFR({
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => FREditMode
   canMarkReady?: (f: FundRequest) => boolean
+  canVoucher?: (f: FundRequest) => boolean
 }) {
   const kinds: Kind[] = ['regular', 'auto', 'reimb']
   return (
@@ -131,7 +133,7 @@ export function GroupedFR({
               const total = fmtTotals({ PHP: rs.reduce((t, f) => t + Number(f.amount_php ?? 0), 0) })
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>
-                  {rs.length > 0 && <FRTable rows={rs} canDelete={canDelete} canEdit={canEdit} canMarkReady={canMarkReady} canApprove={canApprove} />}
+                  {rs.length > 0 && <FRTable rows={rs} canDelete={canDelete} canEdit={canEdit} canMarkReady={canMarkReady} canApprove={canApprove} canVoucher={canVoucher} />}
                 </Group>
               )
             })}
