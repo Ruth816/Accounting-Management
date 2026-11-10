@@ -84,10 +84,9 @@ export function frTypeHelp(f: FRType) {
   if (f.payment_request_id) return undefined
   return f.request_type === 1 ? AUTO_DEBIT_HELP : f.request_type >= 4 ? REIMBURSABLE_HELP : FUND_REQUEST_HELP
 }
-// Types a Fund Requestor may start (Ruth, 10 November): NCR 1, 2 and 4;
-// VisMin 3 and 5 only (no auto debit); no region set, all five.
+// Types a Fund Requestor may start: all five, or only their region's.
 export function newFundRequestTypes(region: 'NCR' | 'VisMin' | null) {
-  return region === 'VisMin' ? [3, 5] : region === 'NCR' ? [1, 2, 4] : [1, 2, 3, 4, 5]
+  return region === 'VisMin' ? [1, 3, 5] : region === 'NCR' ? [1, 2, 4] : [1, 2, 3, 4, 5]
 }
 
 // Sidebar lists: before and after each approval stage.
