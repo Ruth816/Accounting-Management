@@ -148,6 +148,29 @@ export function frStatusLabel(f: FRStage) {
 export const canBeMadeReady = (f: FRStage) =>
   (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
 
+// Who may edit a fund request, and how (Ruth, 10 November). Mirrors
+// fund_request_edit_mode in the database, which enforces it.
+//   prep      being prepared: edit, then send for approval;
+//   in_place  already sent or approved: save changes with remarks, the status stays;
+//   withdraw  its requestor's own request waiting for approval: take it back first.
+// A Fund Requestor may edit their own request until it is funded; an Admin or
+// a Fund Approver may edit every request at any stage. Cancelled requests and
+// requests exported to QuickBooks stay locked.
+export type FREditMode = 'prep' | 'in_place' | 'withdraw' | null
+type FREditable = { status: Status; locked?: boolean | null; fund_requestor_id: string; funded_at?: string | null }
+export function frEditMode(f: FREditable, is: (role: Role) => boolean, meId: string): FREditMode {
+  if (f.status === 'cancelled' || f.status === 'approved_posted_to_qb') return null
+  const staff = is('admin') || is('fund_approver')
+  if (!f.locked && (f.status === 'in_funding_preparation' || f.status === 'returned_to_fund_requestor')) {
+    return staff || is('fund_requestor') ? 'prep' : null
+  }
+  if (!['pending_fund_approval', 'approved_ready_for_qb', 'sync_failed'].includes(f.status)) return null
+  if (staff) return 'in_place'
+  if (!is('fund_requestor') || f.fund_requestor_id !== meId) return null
+  if (f.status === 'pending_fund_approval') return 'withdraw'
+  return f.funded_at ? null : 'in_place'
+}
+
 // Admins and Fund Approvers who also prepare fund requests can send and approve their own in one click (Ruth, 5 November).
 // Only on their own requests: other requestors' requests get Approve once sent.
 export const canSubmitApprove = (f: { status: string; locked?: boolean | null; fund_requestor_id: string }, is: (role: Role) => boolean, meId: string) =>

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { FRTable, PRTable } from './Tables'
 import { fmtTotals } from '@/lib/summary'
-import { PR_KIND_LABEL, frRegionOf } from '@/lib/labels'
+import { type FREditMode, PR_KIND_LABEL, frRegionOf } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Requests split by region (NCR / VisMin) and, inside each, by kind:
@@ -113,7 +113,7 @@ export function GroupedFR({
   regions?: Region[]
   canApprove?: (f: FundRequest) => boolean
   canDelete?: (f: FundRequest) => boolean
-  canEdit?: (f: FundRequest) => boolean
+  canEdit?: (f: FundRequest) => FREditMode
   canMarkReady?: (f: FundRequest) => boolean
 }) {
   const kinds: Kind[] = ['regular', 'auto', 'reimb']

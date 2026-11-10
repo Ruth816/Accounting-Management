@@ -2,7 +2,8 @@ import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { FR_OPEN_STATUSES, canBeMadeReady, canSubmitApprove } from '@/lib/labels'
+import { FR_OPEN_STATUSES, canBeMadeReady, canSubmitApprove, frEditMode } from '@/lib/labels'
+import { EditButton } from '@/components/EditButton'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
@@ -43,13 +44,14 @@ export default async function FundRequestPage({
 
   const isApprover = is('fund_approver') && (fr.fund_approver_id === me.id || fr.fund_requestor_id === me.id || is('admin')) && fr.status === 'pending_fund_approval'
   const approved = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
-  // An Admin may correct an approved fund request (Ruth, 5 November); it can't be deleted.
+  // Its Fund Requestor edits it until it is funded; an Admin or a Fund Approver
+  // edits every request at any stage, until it is exported to QuickBooks (Ruth, 10 November).
+  // Once sent, edits keep the status and need remarks. Approved requests can't be deleted.
   const postedToQb = fr.status === 'approved_posted_to_qb'
-  const canEditApproved = is('admin') && approved && !postedToQb
-  const afterApproval = canEditApproved && edit === '1'
-  const editable =
-    (is('fund_requestor') && !fr.locked && (fr.status === 'in_funding_preparation' || fr.status === 'returned_to_fund_requestor')) ||
-    afterApproval
+  const editMode = frEditMode(fr, is, me.id)
+  const canEditInPlace = editMode === 'in_place'
+  const afterApproval = canEditInPlace && edit === '1'
+  const editable = editMode === 'prep' || afterApproval
 
   let formData: { lookups: Lookup[]; cheques: ChequeOption[] } | null = null
   if (editable) {
@@ -83,11 +85,12 @@ export default async function FundRequestPage({
           <h1>Fund request {fr.ref_no ?? ''}</h1>
           <div className="row status-actions">
             <FRStatusBadge f={fr} />
-            {canEditApproved && !afterApproval && (
+            {canEditInPlace && !afterApproval && (
               <Link className="btn secondary small" href={`/fund-requests/${fr.id}?edit=1`}>
                 Edit
               </Link>
             )}
+            {editMode === 'withdraw' && <EditButton href={`/fund-requests/${fr.id}`} withdrawOp="withdraw_fr" />}
             {is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && canBeMadeReady(fr) && (
               <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: fr.id }} confirm="Put this request on Ready for funding for today?">
                 <Submit className="btn small">Ready for funding</Submit>
@@ -168,15 +171,24 @@ export default async function FundRequestPage({
         </>
       ) : (
         <>
-          {canEditApproved && (
-            <p className="muted small">Approved: it can still be corrected (Edit, with remarks) until it is exported to QuickBooks. It can&apos;t be deleted.</p>
+          {canEditInPlace && (
+            <p className="muted small">
+              {approved ? 'Approved' : 'Waiting for approval'}: it can still be corrected (Edit, with remarks)
+              {is('admin') || is('fund_approver') ? ' until it is exported to QuickBooks' : ' until it is funded'}.
+              {approved && <> It can&apos;t be deleted.</>}
+            </p>
+          )}
+          {approved && !postedToQb && !canEditInPlace && fr.funded_at && (
+            <p className="muted small">Funded: only an Admin or a Fund Approver can correct it now.</p>
           )}
           {postedToQb && <p className="muted small">Exported to QuickBooks: locked, no more edits or deletion.</p>}
           {(() => {
-            const last = [...((audit ?? []) as AuditEntry[])].reverse().find((e) => e.action === 'Edited after approval')
+            const last = [...((audit ?? []) as AuditEntry[])]
+              .reverse()
+              .find((e) => e.action === 'Edited after approval' || e.action === 'Edited while pending approval')
             return last ? (
               <p className="muted small">
-                Last edited after approval on {fmtDateTime(last.created_at)} by {name(last.actor_id)}.
+                Last {last.action.toLowerCase()} on {fmtDateTime(last.created_at)} by {name(last.actor_id)}.
               </p>
             ) : null
           })()}

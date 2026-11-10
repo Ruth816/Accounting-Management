@@ -5,7 +5,7 @@ import { requestAction } from '@/app/actions'
 import { DeleteButton } from './DeleteButton'
 import { EditButton } from './EditButton'
 import { fmtDate, money } from '@/lib/format'
-import { frRegionOf, frTypeLabel, prKindLabel } from '@/lib/labels'
+import { type FREditMode, frRegionOf, frTypeLabel, prKindLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 export function PRTable({
@@ -98,7 +98,7 @@ export function FRTable({
   rows: FundRequest[]
   empty?: string
   canDelete?: (f: FundRequest) => boolean
-  canEdit?: (f: FundRequest) => boolean
+  canEdit?: (f: FundRequest) => FREditMode
   canMarkReady?: (f: FundRequest) => boolean
   canApprove?: (f: FundRequest) => boolean
 }) {
@@ -158,8 +158,8 @@ export function FRTable({
                     )}
                     {canEdit?.(f) && (
                       <EditButton
-                        href={`/fund-requests/${f.id}${f.locked ? '?edit=1' : ''}`}
-                        withdrawOp={f.status === 'pending_fund_approval' ? 'withdraw_fr' : undefined}
+                        href={`/fund-requests/${f.id}${canEdit(f) === 'in_place' ? '?edit=1' : ''}`}
+                        withdrawOp={canEdit(f) === 'withdraw' ? 'withdraw_fr' : undefined}
                         label={f.status === 'in_funding_preparation' ? 'Prepare for Fund request' : 'Edit'}
                       />
                     )}

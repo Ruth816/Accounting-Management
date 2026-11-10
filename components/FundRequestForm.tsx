@@ -22,7 +22,7 @@ export function FundRequestForm({
   lookups: Lookup[]
   approvers: Person[]
   cheques: ChequeOption[]
-  // An Admin correcting an approved fund request: save only, the status stays.
+  // Editing a request that is already sent or approved: save only, with remarks; the status stays.
   afterApproval?: boolean
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(saveFundRequest)
@@ -60,7 +60,7 @@ export function FundRequestForm({
   const [refNo, setRefNo] = useState(fr.ref_no ?? '')
   // From a payment request, the Fund Requestor picks the type (Ruth, 9 November):
   // fund request (cash/check), auto debit or reimbursable, within the request's region.
-  const canPickType = !manual && !afterApproval
+  const canPickType = !manual
   const typeChoices = frRegionOf(fr) === 'VisMin' ? [1, 3, 5] : [1, 2, 4]
   const [requestType, setRequestType] = useState<number>(fr.request_type)
   const [mode, setMode] = useState<'none' | 'existing' | 'new'>(fr.cheque_id ? 'existing' : method === 'Check' ? 'new' : 'none')
