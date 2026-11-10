@@ -94,6 +94,7 @@ export function FRTable({
   canEdit,
   canMarkReady,
   canApprove,
+  canVoucher,
 }: {
   rows: FundRequest[]
   empty?: string
@@ -101,6 +102,7 @@ export function FRTable({
   canEdit?: (f: FundRequest) => FREditMode
   canMarkReady?: (f: FundRequest) => boolean
   canApprove?: (f: FundRequest) => boolean
+  canVoucher?: (f: FundRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
   return (
@@ -116,7 +118,7 @@ export function FRTable({
             <th className="num">Amount (PHP)</th>
             <th>Payment date</th>
             <th>Status</th>
-            {(canDelete || canEdit || canApprove) && <th aria-label="Actions" />}
+            {(canDelete || canEdit || canApprove || canVoucher) && <th aria-label="Actions" />}
           </tr>
         </thead>
         <tbody>
@@ -142,9 +144,14 @@ export function FRTable({
                   <FRStatusBadge f={f} />
                 )}
               </td>
-              {(canDelete || canEdit || canApprove) && (
+              {(canDelete || canEdit || canApprove || canVoucher) && (
                 <td data-label="">
                   <span className="row-actions">
+                    {canVoucher?.(f) && (
+                      <Link className="btn secondary small" href={`/fund-requests/${f.id}/voucher`}>
+                        Voucher
+                      </Link>
+                    )}
                     {canApprove?.(f) && (
                       f.status === 'pending_fund_approval' ? (
                         <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''}?`}>

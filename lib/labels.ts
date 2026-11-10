@@ -145,6 +145,16 @@ export function frStatusLabel(f: FRStage) {
   }
   return STATUS_LABEL[f.status]
 }
+// The voucher (Ruth, 10 November): Admins and Fund Approvers see it from fund
+// approval; Fund Requestors (and anyone else who can see the request) once it
+// is ready for funding, then funded, then exported. Mirrors can_see_voucher
+// in the database, which enforces it.
+type VoucherStage = FRStage & { locked?: boolean | null }
+export function canSeeVoucher(f: VoucherStage, is: (role: Role) => boolean) {
+  if (!f.locked || !FR_APPROVED_STATUSES.includes(f.status)) return false
+  if (is('admin') || is('fund_approver')) return true
+  return !!(f.ready_for_funding_at || f.funded_at || f.status === 'approved_posted_to_qb')
+}
 export const canBeMadeReady = (f: FRStage) =>
   (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
 
