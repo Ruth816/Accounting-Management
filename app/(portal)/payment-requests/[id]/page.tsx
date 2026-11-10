@@ -60,16 +60,16 @@ export default async function PaymentRequestPage({
   // Posted to QuickBooks locks it for good.
   const postedToQb = pr.status === 'approved_posted_to_qb'
   const canEditApproved =
-    is('admin') && !openForEdit && !postedToQb && !['cancelled', 'expired', 'pending_payment_approval'].includes(pr.status)
+    is('admin') && mine && !openForEdit && !postedToQb && !['cancelled', 'expired', 'pending_payment_approval'].includes(pr.status)
   const lastEdit = [...entries].reverse().find((e) => e.action === 'Edited after approval')
   const afterApproval = canEditApproved && edit === '1'
-  const editable = ((mine || is('admin')) && openForEdit) || afterApproval
+  const editable = (mine && openForEdit) || afterApproval
   const routes = await getRoutes()
   const routed = routes[pr.region].length > 0
   const hint = await routeHint(routes)
   // With a route for the region, only that step's approver or an Admin decides.
   const canApprove =
-    is('payment_approver') && (!mine || is('admin')) && pr.status === 'pending_payment_approval' && (!routed || pr.approver_id === me.id || is('admin'))
+    !is('admin') && is('payment_approver') && !mine && pr.status === 'pending_payment_approval' && (!routed || pr.approver_id === me.id)
   const canReceive = is('fund_requestor') && pr.status === 'approved_awaiting_funding'
   const funded = fr && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
   const canLiquidate = mine && pr.payment_type === 'Cash' && funded && !pr.liquidated_on

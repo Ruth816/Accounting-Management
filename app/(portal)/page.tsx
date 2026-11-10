@@ -19,10 +19,9 @@ export default async function Dashboard() {
     is('payment_requestor')
       ? supabase.from('payment_requests').select('*').eq('requestor_id', me.id).neq('status', 'cancelled').order('updated_at', { ascending: false }).limit(50)
       : null,
-    is('payment_approver')
-      ? (is('admin')
-          ? supabase.from('payment_requests').select('*').eq('status', 'pending_payment_approval').order('submitted_on')
-          : supabase.from('payment_requests').select('*').eq('approver_id', me.id).neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on'))
+    // Admins don't approve payment requests (Ruth, 10 November).
+    is('payment_approver') && !is('admin')
+      ? supabase.from('payment_requests').select('*').eq('approver_id', me.id).neq('requestor_id', me.id).eq('status', 'pending_payment_approval').order('submitted_on')
       : null,
     is('fund_requestor')
       ? supabase.from('payment_requests').select('*').eq('status', 'approved_awaiting_funding').order('approved_on')
@@ -48,7 +47,7 @@ export default async function Dashboard() {
   const action: StatCard[] = []
   const progress: StatCard[] = []
   const done: StatCard[] = []
-  if (is('payment_approver')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting approval', href: '#approve-pr' })
+  if (is('payment_approver') && !is('admin')) action.push({ value: toApprove?.data?.length ?? 0, label: 'payment requests awaiting approval', href: '#approve-pr' })
   if (is('fund_approver')) action.push({ value: toFundApprove?.data?.length ?? 0, label: 'fund requests awaiting your approval', href: '#approve-fr' })
   if (is('fund_requestor')) {
     action.push({ value: toReceive?.data?.length ?? 0, label: 'payment requests to prepare for fund request', href: '#receive' })
@@ -120,7 +119,7 @@ export default async function Dashboard() {
           <p className="msg">You have no roles yet. Ask an Admin to give you one.</p>
         ))}
 
-      {is('payment_approver') && (
+      {is('payment_approver') && !is('admin') && (
         <Queue id="approve-pr" title="Waiting for payment approval" count={toApprove?.data?.length}>
           {toApprove?.data?.length ? (
             <SummaryPR rows={toApprove.data as PaymentRequest[]} base="/payment-requests" />
