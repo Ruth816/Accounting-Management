@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { GroupedFR, GroupedPR, REGIONS, RegionTabs, type Region, frRegion, parseRegion, prRegion } from './Grouped'
-import { FR_APPROVED_STATUSES, FR_OPEN_STATUSES, PR_DELETABLE, PR_DELETABLE_BY_SELF_APPROVER, canBeMadeReady, canSubmitApprove } from '@/lib/labels'
+import { FR_OPEN_STATUSES, PR_DELETABLE, PR_DELETABLE_BY_SELF_APPROVER, canBeMadeReady, canSubmitApprove, frEditMode } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
 // Payment requests in the given statuses that the user may see. Other people's drafts stay hidden.
@@ -88,7 +88,7 @@ export async function FundRequestList({ title, sub, statuses, base, region }: Li
         rows={rows}
         regions={reg === 'all' ? shown(REGIONS.filter((g) => rows.some((f) => frRegion(f) === g)), limited) : [reg]}
         canDelete={(f) => mayDelete && !f.locked && FR_OPEN_STATUSES.includes(f.status)}
-        canEdit={(f) => (is('fund_requestor') && !f.locked && FR_OPEN_STATUSES.includes(f.status)) || (is('admin') && FR_APPROVED_STATUSES.includes(f.status) && f.status !== 'approved_posted_to_qb')}
+        canEdit={(f) => frEditMode(f, is, me.id)}
         canApprove={(f) => (is('fund_approver') && f.status === 'pending_fund_approval' && (f.fund_approver_id === me.id || f.fund_requestor_id === me.id || is('admin'))) || canSubmitApprove(f, is, me.id)}
         canMarkReady={(f) => is('fund_approver') && (f.fund_approver_id === me.id || is('admin')) && canBeMadeReady(f)}
       />
