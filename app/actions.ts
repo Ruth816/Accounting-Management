@@ -227,10 +227,8 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         done()
         redirect(`/fund-requests/${frId}`)
       }
-      case 'new_auto_debit':
-      case 'new_check_payment': {
-        const fn = op === 'new_auto_debit' ? 'create_auto_debit_request' : 'create_check_payment_request'
-        const frId = await call(fn, {})
+      case 'new_fund_request': {
+        const frId = await call('create_fund_request', { p_type: Number(str(fd, 'request_type') ?? 1) })
         done()
         redirect(`/fund-requests/${frId}`)
       }

@@ -260,6 +260,19 @@ update fund_requests set ref_no = '1- 2026 10 0999' where id = (select v from id
 set role authenticated;
 select t.expect_error(format('select submit_fund_request(%L)', (select v from ids where k='cp')), 'must start with 2-');
 
+-- New fund request picks one of the five types (Ruth, 10 November).
+select t.as_user('fr');
+insert into ids values ('nt1', create_fund_request(1::smallint));
+insert into ids values ('nt3', create_fund_request(3::smallint));
+insert into ids values ('nt4', create_fund_request(4::smallint));
+select t.eq((select array[request_type::text, payment_method] from fund_requests where id = (select v from ids where k='nt1')),
+            array['1', 'Direct Debit'], 'type 1 is an auto debit request, Direct Debit');
+select t.eq((select array[request_type::text, payment_method, region] from fund_requests where id = (select v from ids where k='nt3')),
+            array['3', 'Check', 'VisMin'], 'type 3 is a VisMin fund request, Check');
+select t.eq((select array[request_type::text, payment_method, region] from fund_requests where id = (select v from ids where k='nt4')),
+            array['4', 'Check', 'NCR'], 'type 4 is an NCR reimbursable fund request, Check');
+select t.expect_error('select create_fund_request(6::smallint)', 'from 1 to 5');
+
 -- QuickBooks lists (spec 10): real payment methods, expense categories only.
 select t.eq((select string_agg(label, ', ' order by sort) from lookups where list = 'payment_method'), 'Cash, Check, Credit Card, Direct Debit, FUND TRANSFER', 'payment methods match QuickBooks');
 select t.eq((select count(*)::int from lookups where list = 'category' and label = 'BANK CHARGES:Transfer & MC Fees'), 1, 'Transfer & MC Fees is a category');
@@ -517,6 +530,9 @@ select t.eq(can_see_pr((select v from ids where k='rv')), false, 'can_see_pr fol
 select t.expect_error(format('select receive_payment_request(%L)', (select v from ids where k='rv')), 'another region|not waiting');
 insert into ids values ('nfr', t.fr_of((select v from ids where k='rn2')));
 select t.eq((select region from fund_requests where id = (select v from ids where k='nfr')), 'NCR', 'NCR fund requestor receives NCR');
+select t.expect_error('select create_fund_request(5::smallint)', 'another region');
+insert into ids values ('nt2', create_fund_request(2::smallint));
+select t.eq((select region from fund_requests where id = (select v from ids where k='nt2')), 'NCR', 'NCR fund requestor starts an NCR fund request');
 select t.as_user('adm');
 insert into ids values ('vfr', t.fr_of((select v from ids where k='rv')));
 select t.as_user('fr');
