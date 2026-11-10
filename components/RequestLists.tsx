@@ -42,15 +42,17 @@ export async function PaymentRequestList({ title, sub, statuses, base, region }:
         name={name}
         regions={reg === 'all' ? shown(REGIONS.filter((g) => rows.some((r) => prRegion(r) === g)), limited) : [reg]}
         canDelete={(r) =>
-          (PR_DELETABLE.includes(r.status) && (r.requestor_id === me.id || is('admin'))) ||
+          // Admins view other people's payment requests only (Ruth, 10 November).
+          (PR_DELETABLE.includes(r.status) && r.requestor_id === me.id) ||
           (is('admin') && PR_DELETABLE_BY_SELF_APPROVER.includes(r.status) && r.requestor_id === me.id && r.approver_id === me.id)
         }
         canEdit={(r) =>
-          ((r.requestor_id === me.id || is('admin')) && ['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status)) ||
-          (is('admin') && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))
+          (r.requestor_id === me.id && ['draft', 'pending_payment_approval', 'returned_to_requestor'].includes(r.status)) ||
+          (is('admin') && r.requestor_id === me.id && !['cancelled', 'expired', 'approved_posted_to_qb'].includes(r.status))
         }
         canApprove={(r) =>
-          is('payment_approver') && r.status === 'pending_payment_approval' && ((r.approver_id === me.id && r.requestor_id !== me.id) || is('admin'))
+          // Only a Payment Approver approves; an Admin views only (Ruth, 10 November).
+          !is('admin') && is('payment_approver') && r.status === 'pending_payment_approval' && r.approver_id === me.id && r.requestor_id !== me.id
         }
       />
     </div>

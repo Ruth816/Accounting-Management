@@ -311,7 +311,7 @@ insert into ids values ('dpr', save_payment_request(null, jsonb_build_object(
   'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 50)))));
 select submit_payment_request((select v from ids where k='dpr'));
 select t.as_user('req2');
-select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Only the requestor or an Admin');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Only its requestor');
 select t.as_user('appr');
 select approve_payment_request((select v from ids where k='dpr'));
 select t.as_user('fr');
@@ -328,20 +328,16 @@ select t.eq((select status::text from fund_requests where id = (select v from id
 select t.eq((select status::text || ' ' || coalesce(fund_request_id::text, 'none') from payment_requests where id = (select v from ids where k='dpr')),
             'approved_awaiting_funding none', 'its payment request waits for funding again');
 select t.as_user('adm');
-select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'already registered');
--- An Admin may still correct an approved request; the status stays and it is logged.
-select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='dpr'), '{"payable_to":"x"}'), 'Add remarks');
-select save_payment_request((select v from ids where k='dpr'), (select to_jsonb(p) || jsonb_build_object('payable_to', 'Corrected payee', 'edit_remarks', 'Payee name was misspelled')
-  from payment_requests p where id = (select v from ids where k='dpr')));
-select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='dpr')),
-            'Corrected payee approved_awaiting_funding', 'Admin edits an approved payment request, status stays');
+-- Admins view other people's payment requests only (Ruth, 10 November).
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='dpr'), 'x'), 'Only its requestor');
+select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='dpr'), '{"payable_to":"x"}'), 'not found');
 insert into ids values ('lfr', (select id from fund_requests where locked and status = 'approved_ready_for_qb' limit 1));
 select save_fund_request((select v from ids where k='lfr'), (select to_jsonb(f) || jsonb_build_object('payment_date', '2026-11-05', 'edit_remarks', 'Payment date moved')
   from fund_requests f where id = (select v from ids where k='lfr')));
 select t.eq((select payment_date::text || ' ' || status::text from fund_requests where id = (select v from ids where k='lfr')),
             '2026-11-05 approved_ready_for_qb', 'Admin edits an approved fund request, status stays');
-select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm')), 2, 'edits after approval are logged');
-select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 2, 'edit log has who and when');
+select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm')), 1, 'edits after approval are logged');
+select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 1, 'edit log has who and when');
 select t.eq((select note from audit_log where action = 'Edited after approval' and fund_request_id = (select v from ids where k='lfr') order by id desc limit 1), 'Payment date moved', 'edit remarks are kept');
 select t.as_user('fr');
 -- Its Fund Requestor may not: they edit until approval only (Ruth, 10 November).
@@ -477,14 +473,15 @@ select t.as_user('req');
 insert into ids values ('apr2', save_payment_request(null, jsonb_build_object(
   'payable_to', 'Admin covers', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'approver_id', t.uid('appr'),
   'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 20)))));
-select t.as_user('adm');
-select save_payment_request((select v from ids where k='apr2'), jsonb_build_object(
-  'payable_to', 'Admin edited', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'approver_id', t.uid('appr'),
-  'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 20))));
 select submit_payment_request((select v from ids where k='apr2'));
+-- Admins view payment requests only: no edit, approve or disapprove (Ruth, 10 November).
+select t.as_user('adm');
+select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='apr2'), '{"payable_to":"x"}'), 'not found');
+select t.expect_error(format('select approve_payment_request(%L)', (select v from ids where k='apr2')), 'Admin can view them only');
+select t.expect_error(format('select disapprove_payment_request(%L, %L)', (select v from ids where k='apr2'), 'x'), 'Admin can view them only');
+select t.as_user('appr');
 select approve_payment_request((select v from ids where k='apr2'));
-select t.eq((select payable_to || ' ' || status::text from payment_requests where id = (select v from ids where k='apr2')),
-            'Admin edited in_funding_preparation', 'Admin edits, submits and approves someone else''s request');
+select t.as_user('adm');
 insert into ids values ('afr2', t.fr_of((select v from ids where k='apr2')));
 select t.eq((select count(*)::int from fund_requests where id = (select v from ids where k='afr2')), 1, 'Admin receives for funding');
 select t.eq((admin_hand_over(t.uid('fa'), t.uid('adm')) ->> 'fund_approvals')::int >= 0, true, 'hand over runs');
@@ -522,8 +519,7 @@ insert into ids values ('rn', save_payment_request(null, jsonb_build_object(
   'approver_id', t.uid('appr'), 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 30)))));
 select submit_payment_request((select v from ids where k='rn'));
 select t.as_user('adm');
-select approve_payment_request((select v from ids where k='rn'));
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='rn')), 'in_funding_preparation', 'Admin approval at step 1 is final');
+select t.expect_error(format('select approve_payment_request(%L)', (select v from ids where k='rn')), 'Admin can view them only');
 select t.as_user('req');
 insert into ids values ('rn2', save_payment_request(null, jsonb_build_object(
   'payable_to', 'NCR site', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
@@ -658,7 +654,7 @@ select t.eq((select status::text from fund_requests where id = (select v from id
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Tick at least one');
 -- Posted to QuickBooks locks it: no more edits, even by an Admin (Ruth, 5 November).
 select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='fr2'), '{}'), 'Posted to QuickBooks');
-select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='pr'), '{}'), 'Posted to QuickBooks');
+select t.expect_error(format('select save_payment_request(%L, %L::jsonb)', (select v from ids where k='pr'), '{}'), 'not found');
 select t.expect_error(format('select delete_fund_request(%L, %L)', (select v from ids where k='fr2'), 'x'), 'cannot be deleted');
 -- QuickBooks imported summary lists it for approvers, not for other roles.
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day') j where (j->>'id')::uuid = (select v from ids where k='fr2'))::int, 1, 'admin sees the exported request in the QuickBooks summary');
@@ -681,8 +677,9 @@ insert into ids values ('dd', save_payment_request(null, jsonb_build_object(
   'payable_to', 'DD payee', 'purpose', 'P', 'date_required', '2026-11-01', 'terms_accepted', true, 'region', 'NCR',
   'payment_type', 'Direct Debit', 'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 50)))));
 select submit_payment_request((select v from ids where k='dd'));
-select t.as_user('adm');
+select t.as_user((select case when approver_id = t.uid('hm') then 'hm' else 'appr' end from payment_requests where id = (select v from ids where k='dd')));
 select approve_payment_request((select v from ids where k='dd'));
+select t.as_user('adm');
 insert into ids values ('ddf', t.fr_of((select v from ids where k='dd')));
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ddf')), 'Direct Debit', 'Direct Debit payment type gives a Direct Debit fund request');
 
@@ -756,24 +753,20 @@ select t.eq((select subtotal_to_fund::text || '|' || memo from fund_requests whe
 select submit_fund_request((select v from ids where k='ck'));
 select t.eq((select status::text from fund_requests where id = (select v from ids where k='ck')), 'pending_fund_approval', 'check with a cheque on every item can be sent');
 
--- An Admin can approve their own payment request, flagged as self-approved (Ruth, 5 November).
+-- An Admin no longer approves payment requests, not even their own (Ruth, 10 November).
 select t.as_user('adm');
 insert into ids values ('selfpr', save_payment_request(null, ('{
   "payable_to": "Self Co", "purpose": "Own request", "date_required": "2026-11-05",
   "items": [{"description": "Fee", "amount": "500"}],
   "billing_type": "VAT", "wtax_rate": "0", "terms_accepted": true, "approver_id": "' || t.uid('appr') || '"}')::jsonb));
 select submit_payment_request((select v from ids where k='selfpr'));
-select approve_payment_request((select v from ids where k='selfpr'));
-select t.eq((select status::text <> 'pending_payment_approval' from payment_requests where id = (select v from ids where k='selfpr')), true, 'admin approves own request');
-select t.eq((select note from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Approved' order by id desc limit 1) like 'Self-approved%', true, 'own approval is flagged as self-approved');
-
--- Only an Admin who is both requestor and approver may delete after approval (Ruth, 9 November).
+select t.expect_error(format('select approve_payment_request(%L)', (select v from ids where k='selfpr')), 'Admin can view them only');
+-- Only its requestor deletes it.
 select t.as_user('fr');
-select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='selfpr'), 'x'), 'Only the requestor or an Admin');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='selfpr'), 'x'), 'Only its requestor');
 select t.as_user('adm');
 select delete_payment_request((select v from ids where k='selfpr'), 'No longer needed');
-select t.eq((select status::text from payment_requests where id = (select v from ids where k='selfpr')), 'cancelled', 'Admin who requested and approved deletes after approval');
-select t.eq((select count(*)::int from fund_requests where payment_request_id = (select v from ids where k='selfpr') and status <> 'cancelled'), 0, 'its open fund request is cancelled with it');
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='selfpr')), 'cancelled', 'Admin deletes their own request');
 select t.eq((select count(*)::int from audit_log where payment_request_id = (select v from ids where k='selfpr') and action = 'Deleted' and note = 'No longer needed') >= 1, true, 'the delete is in the audit log');
 -- Not the requestor only: a request approved by someone else stays.
 select t.as_user('req');
@@ -786,7 +779,7 @@ select approve_payment_request((select v from ids where k='otherpr'));
 select t.as_user('req');
 select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='otherpr'), 'x'), 'cannot be deleted');
 select t.as_user('adm');
-select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='otherpr'), 'x'), 'cannot be deleted');
+select t.expect_error(format('select delete_payment_request(%L, %L)', (select v from ids where k='otherpr'), 'x'), 'Only its requestor');
 
 -- A Payment Approver cannot approve their own request, nor be a Payment Requestor too.
 reset role;
