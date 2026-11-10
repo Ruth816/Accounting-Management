@@ -1,4 +1,5 @@
 import type { Role, Status } from './types'
+import { fmtDate } from './format'
 
 export const STATUS_LABEL: Record<Status, string> = {
   draft: 'Draft',
@@ -6,7 +7,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   returned_to_requestor: 'Returned to Requestor',
   expired: 'Expired',
   cancelled: 'Cancelled',
-  approved_awaiting_funding: 'Approved – Awaiting Funding',
+  approved_awaiting_funding: 'Approved – Preparing for Fund request', // Ruth, 10 November
   in_funding_preparation: 'In Funding Preparation',
   pending_fund_approval: 'Pending Fund Approval',
   returned_to_fund_requestor: 'Returned to Fund Requestor',
@@ -134,14 +135,15 @@ export const PR_DELETABLE_BY_SELF_APPROVER: string[] = [
 export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
 export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']
 
-// Funding stages after approval (Ruth, 5 November): approved (pre-approved),
-// ready for funding, funded, then exported to QuickBooks.
-type FRStage = { status: Status; ready_for_funding_at?: string | null; funded_at?: string | null }
+// Funding stages after approval (Ruth, 10 November): approved for funding,
+// which the requestor sees as preparing for funding, then funded on the date
+// the Fund Approver typed, then exported to QuickBooks.
+type FRStage = { status: Status; ready_for_funding_at?: string | null; funded_at?: string | null; funded_on?: string | null }
 export function frStatusLabel(f: FRStage) {
   if (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') {
     const base = f.status === 'sync_failed' ? 'Sync Failed · ' : ''
-    if (f.funded_at) return base + 'Funded – Ready for QuickBooks'
-    if (f.ready_for_funding_at) return base + 'Ready for funding'
+    if (f.funded_at) return base + (f.funded_on ? `Funded ${fmtDate(f.funded_on)}` : 'Funded')
+    return base + 'Approved – Preparing for funding'
   }
   return STATUS_LABEL[f.status]
 }
@@ -155,16 +157,14 @@ export function canSeeVoucher(f: VoucherStage, is: (role: Role) => boolean) {
   if (is('admin') || is('fund_approver')) return true
   return !!(f.ready_for_funding_at || f.funded_at || f.status === 'approved_posted_to_qb')
 }
-export const canBeMadeReady = (f: FRStage) =>
-  (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
 
 // Who may edit a fund request, and how (Ruth, 10 November). Mirrors
 // fund_request_edit_mode in the database, which enforces it.
 //   prep      being prepared: edit, then send for approval;
 //   in_place  already sent or approved: save changes with remarks, the status stays;
 //   withdraw  its requestor's own request waiting for approval: take it back first.
-// A Fund Requestor may edit their own request until it is funded; an Admin or
-// a Fund Approver may edit every request at any stage. Cancelled requests and
+// A Fund Requestor may edit their own request until it is approved (Ruth,
+// 10 November); after that only an Admin or a Fund Approver corrects it. Cancelled requests and
 // requests exported to QuickBooks stay locked.
 export type FREditMode = 'prep' | 'in_place' | 'withdraw' | null
 type FREditable = { status: Status; locked?: boolean | null; fund_requestor_id: string; funded_at?: string | null }
@@ -177,8 +177,7 @@ export function frEditMode(f: FREditable, is: (role: Role) => boolean, meId: str
   if (!['pending_fund_approval', 'approved_ready_for_qb', 'sync_failed'].includes(f.status)) return null
   if (staff) return 'in_place'
   if (!is('fund_requestor') || f.fund_requestor_id !== meId) return null
-  if (f.status === 'pending_fund_approval') return 'withdraw'
-  return f.funded_at ? null : 'in_place'
+  return f.status === 'pending_fund_approval' ? 'withdraw' : null
 }
 
 // Admins and Fund Approvers who also prepare fund requests can send and approve their own in one click (Ruth, 5 November).

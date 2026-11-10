@@ -328,11 +328,17 @@ const REGIONS = ['NCR', 'VisMin'] as const
 // Ready for funding (Ruth, 5 November): the day's requests grouped by region, then by
 // type of request, with only the ref no., items covered, date and amount, and
 // a total for each group and for the day. Each region's total carries the next
-// step, per region (Ruth, 5 November): Mark as funded, then Ready to import to QuickBooks.
+// step, per region (Ruth, 5 November): tick each request Funded with its date
+// funded (Ruth, 10 November), then Ready to import to QuickBooks.
 function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; canAct: boolean }) {
   const voucherOk = (r: SummaryRow) => ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(r.status)
   const open = (r: SummaryRow) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed'
-  const stage = (r: SummaryRow) => (r.status === 'approved_posted_to_qb' ? 'Imported to QuickBooks' : r.funded ? 'Funded' : 'Not yet funded')
+  const stage = (r: SummaryRow) =>
+    r.status === 'approved_posted_to_qb'
+      ? 'Imported to QuickBooks'
+      : r.funded
+        ? `Funded${r.fundedOn ? ` ${fmtDate(r.fundedOn)}` : ''}`
+        : 'Not yet funded'
   return (
     <section className="card">
       <div className="req-group-head">
@@ -340,7 +346,7 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
         <span className="req-group-total">Total for the day: {fmtTotals(sumRows(rows))}</span>
       </div>
       {rows.length === 0 && (
-        <p className="muted">Nothing was made ready for funding on this day. Use Ready for funding on the Fund approved page.</p>
+        <p className="muted">Nothing was approved for funding on this day.</p>
       )}
       {REGIONS.map((region) => {
         const rr = rows.filter((r) => r.region === region)
@@ -384,7 +390,18 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
                             <td>{r.itemNo ? `Item ${r.itemNo}` : '–'}</td>
                             <td>{r.payDate ? fmtDate(r.payDate) : '–'}</td>
                             <td className="num">{money(r.amount)}</td>
-                            <td className="small muted">{stage(r)}</td>
+                            <td className="small muted">
+                              {canAct && open(r) ? (
+                                <>
+                                  <div className="no-print">
+                                    <FundedTick r={r} />
+                                  </div>
+                                  <span className="print-only">{stage(r)}</span>
+                                </>
+                              ) : (
+                                stage(r)
+                              )}
+                            </td>
                             <td className="no-print">
                               {voucherOk(r) && (
                                 <Link className="btn secondary small" href={`${r.href}/voucher`}>
@@ -425,24 +442,36 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
   )
 }
 
+// Tick one request as funded, with the date it was truly funded, which can be
+// earlier than its encoding or approval (Ruth, 10 November). The date can be
+// corrected, or the tick cleared, until it is imported to QuickBooks.
+function FundedTick({ r }: { r: SummaryRow }) {
+  const today = todayManila()
+  return (
+    <ActionForm action={requestAction} hidden={{ op: 'set_funded', id: r.id }} className="funded-tick">
+      <label className="check">
+        <input type="checkbox" name="funded" value="true" defaultChecked={r.funded} /> Funded
+      </label>
+      <input
+        type="date"
+        name="funded_on"
+        defaultValue={r.fundedOn ?? today}
+        max={today}
+        aria-label={`Date funded for ${r.ref || 'this request'}`}
+      />
+      <Submit className="btn secondary small">Save</Submit>
+    </ActionForm>
+  )
+}
+
 function RegionSteps({ region, day, rows, canAct }: { region: string; day: string; rows: SummaryRow[]; canAct: boolean }) {
   const open = (r: SummaryRow) => r.status === 'approved_ready_for_qb' || r.status === 'sync_failed'
   const toFund = rows.filter((r) => open(r) && !r.funded)
+  const waiting = toFund.length
   const toImport = rows.filter((r) => open(r) && r.funded)
   const imported = rows.filter((r) => r.status === 'approved_posted_to_qb')
   return (
     <div className="row no-print funding-steps">
-      {canAct && toFund.length > 0 && (
-        <ActionForm
-          action={requestAction}
-          hidden={{ op: 'mark_funded', ids: toFund.map((r) => r.id).join(',') }}
-          confirm={`Mark ${toFund.length} ${region} request(s) for ${fmtDate(day)} as funded (${fmtTotals(sumRows(toFund))})?`}
-        >
-          <Submit className="btn">
-            Mark {region} as funded · {fmtTotals(sumRows(toFund))}
-          </Submit>
-        </ActionForm>
-      )}
       {canAct && toImport.length > 0 && (
         <ActionForm
           action={requestAction}
@@ -453,6 +482,11 @@ function RegionSteps({ region, day, rows, canAct }: { region: string; day: strin
             Ready to import {region} to QuickBooks ({toImport.length})
           </Submit>
         </ActionForm>
+      )}
+      {waiting > 0 && (
+        <span className="small muted">
+          {waiting} {region} request(s) not yet funded · {fmtTotals(sumRows(toFund))}. Tick Funded on each one with its date funded.
+        </span>
       )}
       {toFund.length === 0 && toImport.length === 0 && imported.length > 0 && (
         <span className="badge good">{region} funded and imported to QuickBooks</span>

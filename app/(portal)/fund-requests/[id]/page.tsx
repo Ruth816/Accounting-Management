@@ -1,8 +1,7 @@
-import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { FR_OPEN_STATUSES, canBeMadeReady, canSeeVoucher, canSubmitApprove, frEditMode } from '@/lib/labels'
+import { canSeeVoucher, canSubmitApprove, frEditMode } from '@/lib/labels'
 import { EditButton } from '@/components/EditButton'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
@@ -75,9 +74,7 @@ export default async function FundRequestPage({
         fallback={
           !(is('fund_requestor') || is('fund_approver') || is('admin'))
             ? '/'
-            : FR_OPEN_STATUSES.includes(fr.status)
-              ? '/fund-requests'
-              : '/fund-requests/approved'
+            : '/fund-requests'
         }
       />
       <div className="page-head">
@@ -91,19 +88,9 @@ export default async function FundRequestPage({
               </Link>
             )}
             {editMode === 'withdraw' && <EditButton href={`/fund-requests/${fr.id}`} withdrawOp="withdraw_fr" />}
-            {is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && canBeMadeReady(fr) && (
-              <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: fr.id }} confirm="Put this request on Ready for funding for today?">
-                <Submit className="btn small">Ready for funding</Submit>
-              </ActionForm>
-            )}
             {canSubmitApprove(fr, is, me.id) && (
-              <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It moves to Fund approved.">
+              <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It goes to Ready for funding.">
                 <Submit className="btn small">Submit &amp; approve</Submit>
-              </ActionForm>
-            )}
-            {is('fund_approver') && fr.funded_at && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (
-              <ActionForm action={requestAction} hidden={{ op: 'post_qb', id: fr.id }} confirm={QB_CONFIRM}>
-                <Submit className="btn small">Export to QuickBooks</Submit>
               </ActionForm>
             )}
           </div>
@@ -174,12 +161,12 @@ export default async function FundRequestPage({
           {canEditInPlace && (
             <p className="muted small">
               {approved ? 'Approved' : 'Waiting for approval'}: it can still be corrected (Edit, with remarks)
-              {is('admin') || is('fund_approver') ? ' until it is exported to QuickBooks' : ' until it is funded'}.
+ until it is exported to QuickBooks.
               {approved && <> It can&apos;t be deleted.</>}
             </p>
           )}
-          {approved && !postedToQb && !canEditInPlace && fr.funded_at && (
-            <p className="muted small">Funded: only an Admin or a Fund Approver can correct it now.</p>
+          {approved && !postedToQb && !canEditInPlace && (
+            <p className="muted small">Approved: only an Admin or a Fund Approver can correct it now.</p>
           )}
           {postedToQb && <p className="muted small">Exported to QuickBooks: locked, no more edits or deletion.</p>}
           {(() => {
@@ -208,27 +195,20 @@ export default async function FundRequestPage({
       {isApprover && (
         <section className="card">
           <h2>Your decision</h2>
-          <ActionForm action={requestAction} hidden={{ op: 'reviewed', id: fr.id, value: String(!fr.reviewed) }}>
-            <label className="check">
-              <input type="checkbox" checked={fr.reviewed} readOnly /> Reviewed
-            </label>
-            <Submit className="btn secondary small">{fr.reviewed ? 'Clear Reviewed' : 'Tick Reviewed'}</Submit>
-          </ActionForm>
           <div className="decision">
-            <ActionForm action={requestAction} hidden={{ op: 'approve_fr', id: fr.id }}>
-              <Submit disabled={!fr.reviewed}>Approve</Submit>
+            <ActionForm action={requestAction} hidden={{ op: 'approve_fr', id: fr.id }} confirm="You reviewed this fund request and approve it for funding? It goes to Ready for funding.">
+              <Submit>Approve for funding</Submit>
             </ActionForm>
             <ActionForm action={requestAction} hidden={{ op: 'disapprove_fr', id: fr.id }} className="stack">
               <label className="field">
                 <span className="label">Reason for disapproving *</span>
-                <textarea name="reason" rows={2} required disabled={!fr.reviewed} />
+                <textarea name="reason" rows={2} required />
               </label>
-              <Submit className="btn danger" disabled={!fr.reviewed}>
+              <Submit className="btn danger">
                 Disapprove
               </Submit>
             </ActionForm>
           </div>
-          {!fr.reviewed && <p className="small muted">Tick Reviewed to enable Approve and Disapprove.</p>}
         </section>
       )}
 

@@ -72,7 +72,7 @@ export default async function PaymentRequestPage({
     is('payment_approver') && (!mine || is('admin')) && pr.status === 'pending_payment_approval' && (!routed || pr.approver_id === me.id || is('admin'))
   const canReceive = is('fund_requestor') && pr.status === 'approved_awaiting_funding'
   const funded = fr && ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed'].includes(fr.status)
-  const canLiquidate = (mine || is('admin')) && pr.payment_type === 'Cash' && funded && !pr.liquidated_on
+  const canLiquidate = mine && pr.payment_type === 'Cash' && funded && !pr.liquidated_on
   const approvers = people.filter((p) => p.active && p.roles.includes('payment_approver') && p.id !== pr.requestor_id)
 
   return (
@@ -87,7 +87,12 @@ export default async function PaymentRequestPage({
         <div>
           <h1>Payment request {pr.req_no}</h1>
           <div className="row status-actions">
-            <StatusBadge status={pr.status} />
+            {fr?.funded_at && pr.status === 'approved_awaiting_funding' ? (
+              // Funded: the requestor can collect it (Ruth, 10 November).
+              <span className="badge good">Funded{fr.funded_on ? ` ${fmtDate(fr.funded_on)}` : ''} – available at the Finance office</span>
+            ) : (
+              <StatusBadge status={pr.status} />
+            )}
             {canEditApproved && !afterApproval && (
               <Link className="btn secondary small" href={`/payment-requests/${pr.id}?edit=1`}>
                 Edit
@@ -184,7 +189,7 @@ export default async function PaymentRequestPage({
         <section className="card">
           <h2>Funding</h2>
           <ActionForm action={requestAction} hidden={{ op: 'receive', id: pr.id }}>
-            <Submit>Receive and prepare fund request</Submit>
+            <Submit>Prepare fund request</Submit>
           </ActionForm>
         </section>
       )}

@@ -1,15 +1,8 @@
-import { FundRequestList } from '@/components/RequestLists'
-import { FR_APPROVED_STATUSES } from '@/lib/labels'
+import { redirect } from 'next/navigation'
 
-export default async function FundApprovedPage({ searchParams }: { searchParams: Promise<{ region?: string }> }) {
-  const { region } = await searchParams
-  return (
-    <FundRequestList
-      title="Fund approved"
-      sub="Pre-approved by the Fund Approver. Click Ready for funding on a request when you are ready to fund it; it then goes to the Ready for funding list for that day."
-      statuses={FR_APPROVED_STATUSES}
-      base="/fund-requests/approved"
-      region={region}
-    />
-  )
+// The Fund approved list is gone (Ruth, 10 November): approving a request puts
+// it straight on Ready for funding, and approved requests stay on Fund requests
+// until they are imported to QuickBooks. Old links land on Fund requests.
+export default function FundApprovedPage() {
+  redirect('/fund-requests')
 }

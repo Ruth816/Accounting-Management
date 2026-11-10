@@ -143,6 +143,7 @@ export interface FundRequest {
   locked: boolean
   ready_for_funding_at?: string | null
   funded_at?: string | null
+  funded_on?: string | null
   qb_txn_id: string | null
   qb_sync_error: string | null
   created_at: string

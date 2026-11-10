@@ -92,7 +92,6 @@ export function FRTable({
   empty = 'Nothing here.',
   canDelete,
   canEdit,
-  canMarkReady,
   canApprove,
   canVoucher,
 }: {
@@ -100,7 +99,6 @@ export function FRTable({
   empty?: string
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => FREditMode
-  canMarkReady?: (f: FundRequest) => boolean
   canApprove?: (f: FundRequest) => boolean
   canVoucher?: (f: FundRequest) => boolean
 }) {
@@ -136,13 +134,7 @@ export function FRTable({
               <td className="num" data-label="Amount (PHP)">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td data-label="Payment date">{fmtDate(f.payment_date)}</td>
               <td data-label="Status">
-                {canMarkReady?.(f) ? (
-                  <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: f.id }} confirm="Put this request on Ready for funding for today?">
-                    <Submit className="btn small">Ready for funding</Submit>
-                  </ActionForm>
-                ) : (
-                  <FRStatusBadge f={f} />
-                )}
+                <FRStatusBadge f={f} />
               </td>
               {(canDelete || canEdit || canApprove || canVoucher) && (
                 <td data-label="">
@@ -154,11 +146,11 @@ export function FRTable({
                     )}
                     {canApprove?.(f) && (
                       f.status === 'pending_fund_approval' ? (
-                        <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''}?`}>
-                          <Submit className="btn small">Approve</Submit>
+                        <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''} for funding? It goes to Ready for funding.`}>
+                          <Submit className="btn small">Approve for funding</Submit>
                         </ActionForm>
                       ) : (
-                        <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: f.id }} confirm={`Submit and approve fund request ${f.ref_no || ''}? It moves to Fund approved.`}>
+                        <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: f.id }} confirm={`Submit and approve fund request ${f.ref_no || ''}? It goes to Ready for funding.`}>
                           <Submit className="btn small">Submit &amp; approve</Submit>
                         </ActionForm>
                       )

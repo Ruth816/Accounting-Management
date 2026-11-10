@@ -28,7 +28,6 @@ export default async function PortalLayout({ children }: { children: React.React
         ...(seesFunds
           ? [
               { href: '/fund-requests', label: 'Fund requests', icon: 'fund' as const },
-              { href: '/fund-requests/approved', label: 'Fund approved', icon: 'fundCheck' as const },
             ]
           : []),
       ],

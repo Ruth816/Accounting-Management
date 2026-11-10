@@ -336,3 +336,7 @@ td .badge { white-space: normal; border-radius: 10px; line-height: 1.3; }
 .funding-type h4 { margin: 10px 0 4px; }
 .funding-day-total { border-top: 2px solid var(--border); padding-top: 10px; margin: 8px 0 0; font-size: 1.05rem; }
 .funding-steps { margin-top: 10px; gap: 10px; }
+.funded-tick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.funded-tick .check { margin-right: 4px; }
+.funded-tick input[type='date'] { width: auto; padding: 4px 6px; }
+.funded-tick .msg { flex-basis: 100%; margin: 2px 0 0; }

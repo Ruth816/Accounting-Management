@@ -197,25 +197,19 @@ select t.eq((select (get_voucher((select v from ids where k='fr2')) ->> 'payment
 select t.eq((select count(*) from payment_requests), 0::bigint, 'fund approver cannot read payment requests');
 
 select t.as_user('fr');
--- Edit until funded (Ruth, 10 November): the requestor may still correct their
--- approved request before it is funded, with remarks; the status stays.
+-- Edit until approval (Ruth, 10 November): once approved, the requestor can't
+-- edit it; the Fund Approver corrects it with remarks and the status stays.
+select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='fr2'),
+  t.fr_payload((select v from ids where k='fr2'), 'x')), 'already approved');
+select t.as_user('fa');
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='fr2'), '{}'), 'Add remarks');
 select save_fund_request((select v from ids where k='fr2'),
   t.fr_payload((select v from ids where k='fr2'), 'Payment date moved') || '{"payment_date": "2026-10-22"}');
 select t.eq((select payment_date::text || ' ' || status::text from fund_requests where id = (select v from ids where k='fr2')),
-  '2026-10-22 approved_ready_for_qb', 'requestor edits own approved request before funding');
+  '2026-10-22 approved_ready_for_qb', 'Fund Approver corrects an approved request');
 reset role;
 select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')
                and action = 'Edited after approval' and note = 'Payment date moved'), 1, 'the edit and its remarks are logged');
-select t.eq((select count(*)::int from notifications where recipient_id = t.uid('fa') and message like '%was edited: Payment date moved'), 1,
-  'the Fund Approver is told about the edit');
--- Only their own request.
-update fund_requests set fund_requestor_id = t.uid('adm') where id = (select v from ids where k='fr2');
-set role authenticated;
-select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='fr2'),
-  t.fr_payload((select v from ids where k='fr2'), 'x')), 'Only its Fund Requestor');
-reset role;
-update fund_requests set fund_requestor_id = t.uid('fr') where id = (select v from ids where k='fr2');
 set role authenticated;
 select t.eq((select count(*) from available_cheques() where cheque_no = '100300'), 0::bigint, 'cheque with approved request is not offered');
 
@@ -233,6 +227,9 @@ select t.expect_error(format('update payment_requests set status = %L', 'approve
 reset role;
 update payment_requests set payment_type = 'Cash' where id = (select v from ids where k='pr');
 set role authenticated;
+-- Only the Payment Requestor liquidates (Ruth, 10 November).
+select t.as_user('adm');
+select t.expect_error(format('select liquidate_payment_request(%L, 1000, null, null, null)', (select v from ids where k='pr')), 'not found');
 select t.as_user('req');
 select t.expect_error(format('select liquidate_payment_request(%L, 1000, null, null, null)', (select v from ids where k='pr')), 'deposit-back');
 select liquidate_payment_request((select v from ids where k='pr'), 1000, '2026-10-25', 120, 'BDO');
@@ -347,8 +344,8 @@ select t.eq((select count(*)::int from audit_log where action = 'Edited after ap
 select t.eq((select count(*)::int from audit_log where action = 'Edited after approval' and actor_id = t.uid('adm') and created_at is not null), 2, 'edit log has who and when');
 select t.eq((select note from audit_log where action = 'Edited after approval' and fund_request_id = (select v from ids where k='lfr') order by id desc limit 1), 'Payment date moved', 'edit remarks are kept');
 select t.as_user('fr');
--- Its Fund Requestor may too, until it is funded (Ruth, 10 November), with remarks.
-select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'Add remarks');
+-- Its Fund Requestor may not: they edit until approval only (Ruth, 10 November).
+select t.expect_error(format('select save_fund_request(%L, %L::jsonb)', (select v from ids where k='lfr'), '{}'), 'already approved');
 select t.as_user('adm');
 insert into ids values ('dpr2', save_payment_request(null, jsonb_build_object(
   'payable_to', 'Doubled entry', 'purpose', 'P', 'date_required', '2026-11-05',
@@ -609,17 +606,15 @@ set role authenticated;
 -- Mark posted to QuickBooks from the funding summary.
 select t.as_user('fr');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'role');
--- Vouchers (Ruth, 10 November): a Fund Requestor gets it once ready for funding.
-select t.expect_error(format('select get_voucher(%L)', (select v from ids where k='fr2')), 'once the fund request is ready for funding');
-select t.as_user('req');
-select t.expect_error(format('select get_voucher(%L)', (select v from ids where k='fr2')), 'once the fund request is ready for funding');
+-- Vouchers (Ruth, 10 November): a Fund Requestor gets it once ready for
+-- funding, which is now straight after approval.
+select t.eq((get_voucher((select v from ids where k='fr2')) ->> 'fund_prepared_by') is not null, true, 'Fund Requestor sees the voucher after approval');
 select t.as_user('adm');
 select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'Admin sees the voucher from fund approval');
 -- Stages (Ruth, 5 November): ready for funding, then funded, then QuickBooks.
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
-select t.expect_error(format('select mark_funded(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Nothing on this day');
-select mark_ready_for_funding((select v from ids where k='fr2'));
-select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'Ready for funding puts it on the funding list');
+-- Approved for funding goes straight to Ready for funding (Ruth, 10 November).
+select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'approval puts it on Ready for funding');
 select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
 select t.as_user('fr');
 select t.eq((get_voucher((select v from ids where k='fr2')) ->> 'fund_prepared_by') is not null, true, 'Fund Requestor sees the voucher once ready for funding');
@@ -627,11 +622,32 @@ select t.as_user('req');
 select t.eq(can_see_voucher((select v from ids where k='fr2')), true, 'its Payment Requestor sees it too');
 select t.as_user('adm');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
+-- Tick each request funded with the true date funded (Ruth, 10 November).
+select t.expect_error(format('select set_funded(%L, true, null)', (select v from ids where k='fr2')), 'Enter the date funded');
+select t.expect_error(format('select set_funded(%L, true, %L)', (select v from ids where k='fr2'), current_date + 5), 'later than today');
+select set_funded((select v from ids where k='fr2'), true, date '2026-10-28');
+select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-28', 'date funded can be before approval');
+select t.eq((select count(*)::int from notifications where fund_request_id = (select v from ids where k='fr2')
+               and message like '%was funded on Oct 28, 2026.'), 1, 'requestor is told the date funded');
+select t.eq((select count(*)::int from notifications where fund_request_id = (select v from ids where k='fr2')
+               and message like '%is now available. Please go to the Finance office.'), 1, 'payment requestor is told to collect it');
+select t.eq((select count(*)::int from notifications where payment_request_id = (select v from ids where k='pr')
+               and message like '%is funded (Ref no.%'), 0, 'approval no longer says funded');
+select set_funded((select v from ids where k='fr2'), true, date '2026-10-30');
+select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-30', 'date funded can be changed');
+select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')
+               and action = 'Date funded changed'), 1, 'date change is logged');
+select set_funded((select v from ids where k='fr2'), false);
+select t.eq((select funded_at is null and funded_on is null from fund_requests where id = (select v from ids where k='fr2')), true, 'Funded tick can be cleared');
+select t.as_user('fr');
+select t.expect_error(format('select set_funded(%L, true, current_date)', (select v from ids where k='fr2')), 'Fund Approver');
+select t.as_user('adm');
 select t.eq(mark_funded(array[(select v from ids where k='fr2')]), 1, 'marks the day funded');
--- Once funded, only an Admin or a Fund Approver can edit it (Ruth, 10 November).
+select t.eq((select funded_on is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'bulk funding records a date funded');
+-- Once approved, only an Admin or a Fund Approver can edit it (Ruth, 10 November).
 select t.as_user('fr');
 select t.expect_error(format('select save_fund_request(%L, %L)', (select v from ids where k='fr2'),
-  t.fr_payload((select v from ids where k='fr2'), 'x')), 'already funded');
+  t.fr_payload((select v from ids where k='fr2'), 'x')), 'already approved');
 select t.as_user('fa');
 select save_fund_request((select v from ids where k='fr2'), t.fr_payload((select v from ids where k='fr2'), 'Category fixed after funding'));
 select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')
