@@ -1,4 +1,3 @@
-import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
@@ -92,11 +91,6 @@ export default async function FundRequestPage({
             {canSubmitApprove(fr, is, me.id) && (
               <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It goes to Ready for funding.">
                 <Submit className="btn small">Submit &amp; approve</Submit>
-              </ActionForm>
-            )}
-            {is('fund_approver') && fr.funded_at && (fr.status === 'approved_ready_for_qb' || fr.status === 'sync_failed') && (
-              <ActionForm action={requestAction} hidden={{ op: 'post_qb', id: fr.id }} confirm={QB_CONFIRM}>
-                <Submit className="btn small">Export to QuickBooks</Submit>
               </ActionForm>
             )}
           </div>

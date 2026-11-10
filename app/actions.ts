@@ -249,9 +249,6 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         const n = await call('mark_posted_to_qb', { p_ids: (str(fd, 'ids') ?? '').split(',').filter(Boolean) })
         return done(n === 1 ? 'Imported to QuickBooks and locked.' : `${n} requests imported to QuickBooks and locked.`)
       }
-      case 'post_qb':
-        await call('mark_posted_to_qb', { p_ids: [id] })
-        return done('Exported to QuickBooks and locked.')
       case 'quick_approve_fr':
         // Approve from the list: the confirm stands for ticking Reviewed (Ruth, 5 November).
         await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
