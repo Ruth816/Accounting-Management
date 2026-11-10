@@ -264,9 +264,12 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
         await call('approve_fund_request', { p_id: id })
         return done('Fund request submitted and approved.')
       case 'approve_fr':
+        // One click: Approve for funding also counts as Reviewed (Ruth, 10 November).
+        await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
         await call('approve_fund_request', { p_id: id })
         return done('Fund request approved.')
       case 'disapprove_fr':
+        await call('set_fund_reviewed', { p_id: id, p_reviewed: true })
         await call('disapprove_fund_request', { p_id: id, p_reason: reason })
         return done('Returned to the Fund Requestor.')
       case 'return_to_approver':

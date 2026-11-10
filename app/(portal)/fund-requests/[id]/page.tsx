@@ -201,27 +201,20 @@ export default async function FundRequestPage({
       {isApprover && (
         <section className="card">
           <h2>Your decision</h2>
-          <ActionForm action={requestAction} hidden={{ op: 'reviewed', id: fr.id, value: String(!fr.reviewed) }}>
-            <label className="check">
-              <input type="checkbox" checked={fr.reviewed} readOnly /> Reviewed
-            </label>
-            <Submit className="btn secondary small">{fr.reviewed ? 'Clear Reviewed' : 'Tick Reviewed'}</Submit>
-          </ActionForm>
           <div className="decision">
-            <ActionForm action={requestAction} hidden={{ op: 'approve_fr', id: fr.id }}>
-              <Submit disabled={!fr.reviewed}>Approve for funding</Submit>
+            <ActionForm action={requestAction} hidden={{ op: 'approve_fr', id: fr.id }} confirm="You reviewed this fund request and approve it for funding? It goes to Ready for funding.">
+              <Submit>Approve for funding</Submit>
             </ActionForm>
             <ActionForm action={requestAction} hidden={{ op: 'disapprove_fr', id: fr.id }} className="stack">
               <label className="field">
                 <span className="label">Reason for disapproving *</span>
-                <textarea name="reason" rows={2} required disabled={!fr.reviewed} />
+                <textarea name="reason" rows={2} required />
               </label>
-              <Submit className="btn danger" disabled={!fr.reviewed}>
+              <Submit className="btn danger">
                 Disapprove
               </Submit>
             </ActionForm>
           </div>
-          {!fr.reviewed && <p className="small muted">Tick Reviewed to enable Approve for funding and Disapprove.</p>}
         </section>
       )}
 
