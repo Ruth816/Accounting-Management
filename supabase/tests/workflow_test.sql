@@ -272,6 +272,9 @@ select t.eq((select array[request_type::text, payment_method, region] from fund_
 select t.eq((select array[request_type::text, payment_method, region] from fund_requests where id = (select v from ids where k='nt4')),
             array['4', 'Check', 'NCR'], 'type 4 is an NCR reimbursable fund request, Check');
 select t.expect_error('select create_fund_request(6::smallint)', 'from 1 to 5');
+select t.as_user('req');
+select t.expect_error('select create_fund_request(2::smallint)', 'Fund Requestor role');
+select t.as_user('fr');
 
 -- QuickBooks lists (spec 10): real payment methods, expense categories only.
 select t.eq((select string_agg(label, ', ' order by sort) from lookups where list = 'payment_method'), 'Cash, Check, Credit Card, Direct Debit, FUND TRANSFER', 'payment methods match QuickBooks');
