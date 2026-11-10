@@ -2,7 +2,7 @@ import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { canBeMadeReady, canSubmitApprove, frEditMode } from '@/lib/labels'
+import { canSubmitApprove, frEditMode } from '@/lib/labels'
 import { EditButton } from '@/components/EditButton'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
@@ -89,11 +89,6 @@ export default async function FundRequestPage({
               </Link>
             )}
             {editMode === 'withdraw' && <EditButton href={`/fund-requests/${fr.id}`} withdrawOp="withdraw_fr" />}
-            {is('fund_approver') && (fr.fund_approver_id === me.id || is('admin')) && canBeMadeReady(fr) && (
-              <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: fr.id }} confirm="Put this request on Ready for funding for today?">
-                <Submit className="btn small">Ready for funding</Submit>
-              </ActionForm>
-            )}
             {canSubmitApprove(fr, is, me.id) && (
               <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It goes to Ready for funding.">
                 <Submit className="btn small">Submit &amp; approve</Submit>

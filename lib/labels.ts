@@ -147,8 +147,6 @@ export function frStatusLabel(f: FRStage) {
   }
   return STATUS_LABEL[f.status]
 }
-export const canBeMadeReady = (f: FRStage) =>
-  (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') && !f.ready_for_funding_at
 
 // Who may edit a fund request, and how (Ruth, 10 November). Mirrors
 // fund_request_edit_mode in the database, which enforces it.

@@ -92,14 +92,12 @@ export function FRTable({
   empty = 'Nothing here.',
   canDelete,
   canEdit,
-  canMarkReady,
   canApprove,
 }: {
   rows: FundRequest[]
   empty?: string
   canDelete?: (f: FundRequest) => boolean
   canEdit?: (f: FundRequest) => FREditMode
-  canMarkReady?: (f: FundRequest) => boolean
   canApprove?: (f: FundRequest) => boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
@@ -134,13 +132,7 @@ export function FRTable({
               <td className="num" data-label="Amount (PHP)">{f.amount_php === null ? '' : money(f.amount_php)}</td>
               <td data-label="Payment date">{fmtDate(f.payment_date)}</td>
               <td data-label="Status">
-                {canMarkReady?.(f) ? (
-                  <ActionForm action={requestAction} hidden={{ op: 'ready_for_funding', id: f.id }} confirm="Put this request on Ready for funding for today?">
-                    <Submit className="btn small">Ready for funding</Submit>
-                  </ActionForm>
-                ) : (
-                  <FRStatusBadge f={f} />
-                )}
+                <FRStatusBadge f={f} />
               </td>
               {(canDelete || canEdit || canApprove) && (
                 <td data-label="">
