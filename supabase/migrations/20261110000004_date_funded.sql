@@ -38,6 +38,9 @@ begin
     update fund_requests set funded_at = now(), funded_by = uid, funded_on = p_date where id = f.id;
     perform log_event(f.payment_request_id, f.id, 'Funded', f.status, f.status,
       'Date funded ' || to_char(p_date, 'Mon FMDD, YYYY'));
+    perform notify(f.fund_requestor_id,
+      format('Fund request %s was funded on %s.', f.ref_no, to_char(p_date, 'Mon FMDD, YYYY')),
+      f.payment_request_id, f.id);
   elsif f.funded_on is distinct from p_date then
     update fund_requests set funded_on = p_date where id = f.id;
     perform log_event(f.payment_request_id, f.id, 'Date funded changed', f.status, f.status,
@@ -70,3 +73,30 @@ begin
   if n = 0 then raise exception 'Nothing on this day is waiting to be marked as funded.'; end if;
   return n;
 end $$;
+
+-- Approved for funding goes straight to Ready for funding (Ruth, 10 November):
+-- the separate Fund approved list is gone, and Ready for funding is where every
+-- approved request waits until the Fund Approver ticks it Funded. The trigger
+-- covers every way a request is approved (Approve, Submit & approve, the
+-- Admin override).
+create or replace function fr_ready_on_approval() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'approved_ready_for_qb' and old.status is distinct from new.status
+     and old.status not in ('approved_ready_for_qb', 'sync_failed', 'approved_posted_to_qb')
+     and new.ready_for_funding_at is null then
+    new.ready_for_funding_at := now();
+    new.ready_for_funding_by := coalesce(new.approved_by, auth.uid());
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists fr_ready_on_approval on fund_requests;
+create trigger fr_ready_on_approval before update of status on fund_requests
+  for each row execute function fr_ready_on_approval();
+
+-- Requests already approved but not yet on Ready for funding join it on the
+-- day they were approved.
+update fund_requests
+   set ready_for_funding_at = coalesce(approved_on, now()), ready_for_funding_by = approved_by
+ where status in ('approved_ready_for_qb', 'sync_failed') and ready_for_funding_at is null;

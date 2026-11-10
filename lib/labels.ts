@@ -1,4 +1,5 @@
 import type { Role, Status } from './types'
+import { fmtDate } from './format'
 
 export const STATUS_LABEL: Record<Status, string> = {
   draft: 'Draft',
@@ -134,14 +135,15 @@ export const PR_DELETABLE_BY_SELF_APPROVER: string[] = [
 export const FR_OPEN_STATUSES = ['in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor']
 export const FR_APPROVED_STATUSES = ['approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed']
 
-// Funding stages after approval (Ruth, 5 November): approved (pre-approved),
-// ready for funding, funded, then exported to QuickBooks.
-type FRStage = { status: Status; ready_for_funding_at?: string | null; funded_at?: string | null }
+// Funding stages after approval (Ruth, 10 November): approved for funding,
+// which the requestor sees as preparing for funding, then funded on the date
+// the Fund Approver typed, then exported to QuickBooks.
+type FRStage = { status: Status; ready_for_funding_at?: string | null; funded_at?: string | null; funded_on?: string | null }
 export function frStatusLabel(f: FRStage) {
   if (f.status === 'approved_ready_for_qb' || f.status === 'sync_failed') {
     const base = f.status === 'sync_failed' ? 'Sync Failed · ' : ''
-    if (f.funded_at) return base + 'Funded – Ready for QuickBooks'
-    if (f.ready_for_funding_at) return base + 'Ready for funding'
+    if (f.funded_at) return base + (f.funded_on ? `Funded ${fmtDate(f.funded_on)}` : 'Funded')
+    return base + 'Approved – Preparing for funding'
   }
   return STATUS_LABEL[f.status]
 }

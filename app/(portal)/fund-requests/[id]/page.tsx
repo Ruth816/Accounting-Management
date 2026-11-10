@@ -2,7 +2,7 @@ import { QB_CONFIRM } from '@/components/PostQbForm'
 import { fmtDateTime } from '@/lib/format'
 import Link from 'next/link'
 import { BackButton } from '@/components/BackButton'
-import { FR_OPEN_STATUSES, canBeMadeReady, canSubmitApprove, frEditMode } from '@/lib/labels'
+import { canBeMadeReady, canSubmitApprove, frEditMode } from '@/lib/labels'
 import { EditButton } from '@/components/EditButton'
 import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
@@ -75,9 +75,7 @@ export default async function FundRequestPage({
         fallback={
           !(is('fund_requestor') || is('fund_approver') || is('admin'))
             ? '/'
-            : FR_OPEN_STATUSES.includes(fr.status)
-              ? '/fund-requests'
-              : '/fund-requests/approved'
+            : '/fund-requests'
         }
       />
       <div className="page-head">
@@ -97,7 +95,7 @@ export default async function FundRequestPage({
               </ActionForm>
             )}
             {canSubmitApprove(fr, is, me.id) && (
-              <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It moves to Fund approved.">
+              <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: fr.id }} confirm="Submit and approve this fund request? Save any changes below first. It goes to Ready for funding.">
                 <Submit className="btn small">Submit &amp; approve</Submit>
               </ActionForm>
             )}
@@ -216,7 +214,7 @@ export default async function FundRequestPage({
           </ActionForm>
           <div className="decision">
             <ActionForm action={requestAction} hidden={{ op: 'approve_fr', id: fr.id }}>
-              <Submit disabled={!fr.reviewed}>Approve</Submit>
+              <Submit disabled={!fr.reviewed}>Approve for funding</Submit>
             </ActionForm>
             <ActionForm action={requestAction} hidden={{ op: 'disapprove_fr', id: fr.id }} className="stack">
               <label className="field">
@@ -228,7 +226,7 @@ export default async function FundRequestPage({
               </Submit>
             </ActionForm>
           </div>
-          {!fr.reviewed && <p className="small muted">Tick Reviewed to enable Approve and Disapprove.</p>}
+          {!fr.reviewed && <p className="small muted">Tick Reviewed to enable Approve for funding and Disapprove.</p>}
         </section>
       )}
 

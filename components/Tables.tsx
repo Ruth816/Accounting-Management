@@ -147,11 +147,11 @@ export function FRTable({
                   <span className="row-actions">
                     {canApprove?.(f) && (
                       f.status === 'pending_fund_approval' ? (
-                        <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''}?`}>
-                          <Submit className="btn small">Approve</Submit>
+                        <ActionForm action={requestAction} hidden={{ op: 'quick_approve_fr', id: f.id }} confirm={`Reviewed and approve fund request ${f.ref_no || ''} for funding? It goes to Ready for funding.`}>
+                          <Submit className="btn small">Approve for funding</Submit>
                         </ActionForm>
                       ) : (
-                        <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: f.id }} confirm={`Submit and approve fund request ${f.ref_no || ''}? It moves to Fund approved.`}>
+                        <ActionForm action={requestAction} hidden={{ op: 'submit_approve_fr', id: f.id }} confirm={`Submit and approve fund request ${f.ref_no || ''}? It goes to Ready for funding.`}>
                           <Submit className="btn small">Submit &amp; approve</Submit>
                         </ActionForm>
                       )

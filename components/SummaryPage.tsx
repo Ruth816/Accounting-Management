@@ -346,7 +346,7 @@ function FundingDay({ day, rows, canAct }: { day: string; rows: SummaryRow[]; ca
         <span className="req-group-total">Total for the day: {fmtTotals(sumRows(rows))}</span>
       </div>
       {rows.length === 0 && (
-        <p className="muted">Nothing was made ready for funding on this day. Use Ready for funding on the Fund approved page.</p>
+        <p className="muted">Nothing was approved for funding on this day.</p>
       )}
       {REGIONS.map((region) => {
         const rr = rows.filter((r) => r.region === region)

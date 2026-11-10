@@ -48,12 +48,12 @@ type KindInfo = { title: string; sub: string; role: 'fund_approver'; amountLabel
 export const KIND_INFO: Record<SummaryKind, KindInfo> = {
   funding: {
     title: 'Ready for funding',
-    sub: 'Requests you marked Ready for funding, with totals per day, region and type of request. Send out the funds, tick each request as funded with the date it was funded, then import it to QuickBooks.',
+    sub: 'Every request approved for funding, by the day it was approved, with totals per day, region and type of request. Send out the funds, tick each request as funded with the date it was funded, then import it to QuickBooks.',
     role: 'fund_approver',
     amountLabel: 'Amount to fund (PHP)',
     accountLabel: 'Payment account',
     file: 'funding-summary',
-    verb: 'made ready for funding',
+    verb: 'approved for funding',
   },
   // Replaces the approved payments summary (Ruth, 5 November): approved fund
   // requests already exported to QuickBooks, by the day they were exported.

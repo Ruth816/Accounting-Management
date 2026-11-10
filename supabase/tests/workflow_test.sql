@@ -612,9 +612,8 @@ select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (sel
 select t.as_user('adm');
 -- Stages (Ruth, 5 November): ready for funding, then funded, then QuickBooks.
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
-select t.expect_error(format('select mark_funded(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Nothing on this day');
-select mark_ready_for_funding((select v from ids where k='fr2'));
-select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'Ready for funding puts it on the funding list');
+-- Approved for funding goes straight to Ready for funding (Ruth, 10 November).
+select t.eq((select ready_for_funding_at is not null from fund_requests where id = (select v from ids where k='fr2')), true, 'approval puts it on Ready for funding');
 select t.expect_error(format('select mark_ready_for_funding(%L)', (select v from ids where k='fr2')), 'already ready');
 select t.expect_error(format('select mark_posted_to_qb(array[%L]::uuid[])', (select v from ids where k='fr2')), 'Mark it as funded');
 -- Tick each request funded with the true date funded (Ruth, 10 November).
@@ -622,6 +621,8 @@ select t.expect_error(format('select set_funded(%L, true, null)', (select v from
 select t.expect_error(format('select set_funded(%L, true, %L)', (select v from ids where k='fr2'), current_date + 5), 'later than today');
 select set_funded((select v from ids where k='fr2'), true, date '2026-10-28');
 select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-28', 'date funded can be before approval');
+select t.eq((select count(*)::int from notifications where fund_request_id = (select v from ids where k='fr2')
+               and message like '%was funded on Oct 28, 2026.'), 1, 'requestor is told the date funded');
 select set_funded((select v from ids where k='fr2'), true, date '2026-10-30');
 select t.eq((select funded_on::text from fund_requests where id = (select v from ids where k='fr2')), '2026-10-30', 'date funded can be changed');
 select t.eq((select count(*)::int from audit_log where fund_request_id = (select v from ids where k='fr2')
