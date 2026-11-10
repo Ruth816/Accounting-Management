@@ -227,6 +227,9 @@ select t.expect_error(format('update payment_requests set status = %L', 'approve
 reset role;
 update payment_requests set payment_type = 'Cash' where id = (select v from ids where k='pr');
 set role authenticated;
+-- Only the Payment Requestor liquidates (Ruth, 10 November).
+select t.as_user('adm');
+select t.expect_error(format('select liquidate_payment_request(%L, 1000, null, null, null)', (select v from ids where k='pr')), 'not found');
 select t.as_user('req');
 select t.expect_error(format('select liquidate_payment_request(%L, 1000, null, null, null)', (select v from ids where k='pr')), 'deposit-back');
 select liquidate_payment_request((select v from ids where k='pr'), 1000, '2026-10-25', 120, 'BDO');

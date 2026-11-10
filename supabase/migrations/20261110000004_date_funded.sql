@@ -165,3 +165,44 @@ language sql stable as $$
     else 'Only its Fund Requestor, an Admin or a Fund Approver can edit this fund request.'
   end;
 $$;
+
+-- Only the Payment Requestor liquidates; Admin no longer can (Ruth, 10 November).
+create or replace function liquidate_payment_request(
+  p_id uuid, p_actual_used numeric, p_deposit_date date, p_deposit_amount numeric, p_deposit_bank text
+) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := require_user();
+  r payment_requests;
+  f fund_requests;
+  v_change numeric;
+begin
+  select * into r from payment_requests where id = p_id for update;
+  if not found or r.requestor_id <> uid then raise exception 'Payment request not found.'; end if;
+  if r.payment_type <> 'Cash' then raise exception 'Only cash requests are liquidated.'; end if;
+  if r.liquidated_on is not null then raise exception 'This request is already liquidated.'; end if;
+  select * into f from fund_requests where id = r.fund_request_id;
+  if not found or f.status not in ('approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed') then
+    raise exception 'You can liquidate once the fund request is approved.';
+  end if;
+  if p_actual_used is null or p_actual_used < 0 then raise exception 'Enter the actual amount used.'; end if;
+
+  v_change := coalesce(f.amount_php, 0) - round(p_actual_used, 2);
+  if v_change > 0 and (p_deposit_date is null or p_deposit_amount is null or nullif(btrim(p_deposit_bank), '') is null) then
+    raise exception 'There is change of PHP %. Enter the deposit-back date, amount and bank.', money_txt(v_change);
+  end if;
+
+  update payment_requests set
+    liq_actual_used = round(p_actual_used, 2),
+    liq_change = v_change,
+    liq_deposit_date = p_deposit_date,
+    liq_deposit_amount = round(p_deposit_amount, 2),
+    liq_deposit_bank = nullif(btrim(p_deposit_bank), ''),
+    liquidated_on = now()
+  where id = r.id;
+  perform log_event(r.id, f.id, 'Liquidated', null, null,
+    format('Used PHP %s, change PHP %s', money_txt(p_actual_used), money_txt(v_change)));
+  perform notify_role('fund_requestor',
+    format('Payment request %s was liquidated: used PHP %s, change PHP %s.', r.req_no, money_txt(p_actual_used), money_txt(v_change)),
+    r.id, f.id);
+end $$;
