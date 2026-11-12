@@ -536,6 +536,9 @@ select t.eq((select count(*)::int from payment_requests where id = (select v fro
 select t.eq(can_see_pr((select v from ids where k='rn2')), false, 'VisMin-only approver cannot open NCR');
 select t.as_user('hm');
 select t.eq((select count(*)::int from payment_requests where id in ((select v from ids where k='rn2'), (select v from ids where k='rn'))), 2, 'approver on both regions sees both');
+-- One person cannot be both VisMin approvers (Ruth, 12 November).
+select t.as_user('adm');
+select t.expect_error(format('select admin_set_routes(%L::jsonb)', jsonb_build_object('VisMin', jsonb_build_array(t.uid('hm'), t.uid('hm')))), 'must be different');
 select t.as_user('adm');
 select admin_set_routes('{}'::jsonb);
 -- With no routing, the approver's own Region still limits them.
