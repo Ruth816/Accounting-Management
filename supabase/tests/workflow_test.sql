@@ -302,6 +302,8 @@ select t.as_user('fr');
 select t.eq((select string_agg(label, ', ' order by sort) from lookups where list = 'payment_method'), 'Cash, Check, Credit Card, Direct Debit, FUND TRANSFER', 'payment methods match QuickBooks');
 select t.eq((select count(*)::int from lookups where list = 'category' and label = 'BANK CHARGES:Transfer & MC Fees'), 1, 'Transfer & MC Fees is a category');
 select t.eq((select count(*)::int from lookups where list = 'category' and label in ('Loan Payable', 'AMORTIZATION EXPENSES', 'Utilities')), 0, 'no samples, no locked parents');
+select t.eq((select count(*)::int from lookups where list = 'category' and label in ('Cost of sales:PROJ SUBCON', 'Cost of sales:PROJ Freight and delivery Fees', 'TRANSPORTATION EXPENSES- ADMIN:Transpo Allowances')), 3, 'categories follow the October 2026 QuickBooks list');
+select t.eq((select count(*)::int from lookups where list = 'category' and label in ('PROJ SUBCON', 'TRANSPORTATION EXPENSES- ADMIN')), 0, 'old PROJ names and locked parents are gone');
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ad')), 'Check', 'auto debit can still be paid by Check');
 
 -- Delete button: soft delete to Cancelled, kept in the audit log.
