@@ -44,6 +44,7 @@ export function PRTable({
             <th className="num">Amount due</th>
             <th>Required</th>
             {showApprovedOn && <th>Approved on</th>}
+            {showApprovedOn && <th>Approved by</th>}
             <th>Status</th>
             {(canDelete || canEdit || canApprove) && <th aria-label="Actions" />}
           </tr>
@@ -73,6 +74,12 @@ export function PRTable({
               </td>
               <td data-label="Required">{fmtDate(r.date_required)}</td>
               {showApprovedOn && <td data-label="Approved on">{fmtDateTime(r.approved_on)}</td>}
+              {showApprovedOn && (
+                <td data-label="Approved by">
+                  {r.first_approver_id && r.first_approver_id !== r.approver_id ? `${name(r.first_approver_id)}, ` : ''}
+                  {name(r.approver_id)}
+                </td>
+              )}
               <td data-label="Status">
                 <StatusBadge status={r.status} />
               </td>

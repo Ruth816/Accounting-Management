@@ -13,7 +13,7 @@ import type { FundRequest, PaymentRequest } from '@/lib/types'
 const shown = (withRows: Region[], limited: boolean): Region[] => (!limited ? REGIONS : withRows.length ? withRows : REGIONS.slice(0, 1))
 
 type ListProps = { title: string; sub: string; statuses: string[]; base: string; region?: string }
-type PRListProps = ListProps & { byApprovalDay?: boolean; date?: string }
+type PRListProps = ListProps & { byApprovalDay?: boolean; date?: string; by?: string }
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 const shiftDay = (day: string, n: number) => {
@@ -22,31 +22,31 @@ const shiftDay = (day: string, n: number) => {
   return d.toISOString().slice(0, 10)
 }
 
-export async function PaymentRequestList({ title, sub, statuses, base, region, byApprovalDay, date }: PRListProps) {
+export async function PaymentRequestList({ title, sub, statuses, base, region, byApprovalDay, date, by }: PRListProps) {
   const { supabase, me, is, myRegion, limited } = await getMe()
   const { name } = await getDirectory()
-  // Payment approved: a Payment Approver sees what they approved, on any one day (Ruth, 12 November).
-  const approverView = !!byApprovalDay && me.roles.includes('payment_approver') && !me.roles.includes('admin')
   const day = byApprovalDay && date && DAY_RE.test(date) && !Number.isNaN(Date.parse(date)) ? date : null
   let q = supabase
     .from('payment_requests')
     .select('*')
     .in('status', statuses)
     .or(`status.neq.draft,requestor_id.eq.${me.id}`)
-  if (approverView) q = q.or(`approver_id.eq.${me.id},first_approver_id.eq.${me.id}`)
-  if (day) {
-    // The approval day in Philippine time. A VisMin first approver's day is when they approved it.
-    const from = `${day}T00:00:00+08:00`
-    const to = `${shiftDay(day, 1)}T00:00:00+08:00`
-    q = approverView
-      ? q.or(
-          `and(approver_id.eq.${me.id},approved_on.gte.${from},approved_on.lt.${to}),` +
-            `and(first_approver_id.eq.${me.id},first_approved_on.gte.${from},first_approved_on.lt.${to})`,
-        )
-      : q.gte('approved_on', from).lt('approved_on', to)
-  }
+  // The approval day in Philippine time; a VisMin first approver's day counts too.
+  const from = day ? `${day}T00:00:00+08:00` : ''
+  const to = day ? `${shiftDay(day, 1)}T00:00:00+08:00` : ''
+  if (day) q = q.or(`and(approved_on.gte.${from},approved_on.lt.${to}),and(first_approved_on.gte.${from},first_approved_on.lt.${to})`)
   const { data } = await q.order(byApprovalDay ? 'approved_on' : 'updated_at', { ascending: false }).limit(day ? 1000 : 200)
-  const rows = ((data ?? []) as PaymentRequest[]).filter((r) => !myRegion || prRegion(r) === myRegion)
+  const inDay = (iso: string | null) => !day || (!!iso && Date.parse(iso) >= Date.parse(from) && Date.parse(iso) < Date.parse(to))
+  // Payment approved shows every approved request in the region, by anyone; "Approved by"
+  // narrows it to one approver, e.g. "Me" (Ruth, 12 November).
+  const approvedBy = (r: PaymentRequest, id: string) =>
+    (r.approver_id === id && inDay(r.approved_on)) || (r.first_approver_id === id && inDay(r.first_approved_on))
+  const allRows = ((data ?? []) as PaymentRequest[])
+    .filter((r) => !myRegion || prRegion(r) === myRegion)
+    .filter((r) => !day || inDay(r.approved_on) || inDay(r.first_approved_on))
+  const approverIds = [...new Set(allRows.flatMap((r) => [r.approver_id, r.first_approver_id]).filter((x): x is string => !!x))]
+  const who = byApprovalDay && by && (by === me.id || approverIds.includes(by)) ? by : null
+  const rows = who ? allRows.filter((r) => approvedBy(r, who)) : allRows
   const reg = myRegion ?? parseRegion(region)
 
   // With an approval route for the region, only the request's own approver may approve it;
@@ -59,12 +59,15 @@ export async function PaymentRequestList({ title, sub, statuses, base, region, b
     is('payment_approver') &&
     r.status === 'pending_payment_approval' &&
     r.requestor_id !== me.id &&
-    (r.approver_id === me.id || !routed.has(r.region ?? 'NCR'))
+    r.first_approver_id !== me.id &&
+    // VisMin always goes Jonathan (approver 1), then Hoe Ming (approver 2) (Ruth, 12 November).
+    (r.approver_id === me.id || (!routed.has(r.region ?? 'NCR') && r.region !== 'VisMin'))
   const visibleRegions = reg === 'all' ? shown(REGIONS.filter((g) => rows.some((r) => prRegion(r) === g)), limited) : [reg]
   const approvable = rows.filter((r) => visibleRegions.includes(prRegion(r)) && canApprove(r)).length
   const dayQ = (d: string | null) => {
     const p = new URLSearchParams()
     if (d) p.set('date', d)
+    if (who) p.set('by', who)
     if (reg !== 'all' && !myRegion) p.set('region', reg)
     const s = p.toString()
     return s ? `${base}?${s}` : base
@@ -80,7 +83,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region, b
         myRegion && <p className="muted">Showing {myRegion} requests only.</p>
       ) : (
       <RegionTabs
-        base={day ? `${base}?date=${day}` : base}
+        base={day || who ? `${base}?${new URLSearchParams({ ...(day ? { date: day } : {}), ...(who ? { by: who } : {}) })}` : base}
         current={reg}
         counts={{ all: rows.length, NCR: rows.filter((r) => prRegion(r) === 'NCR').length, VisMin: rows.filter((r) => prRegion(r) === 'VisMin').length }}
       />
@@ -91,6 +94,22 @@ export async function PaymentRequestList({ title, sub, statuses, base, region, b
           <label className="field">
             <span className="label">Approval date</span>
             <input type="date" name="date" defaultValue={day ?? ''} />
+          </label>
+          <label className="field">
+            <span className="label">Approved by</span>
+            <select name="by" defaultValue={who ?? ''}>
+              <option value="">Everyone</option>
+              {is('payment_approver') && !is('admin') && <option value={me.id}>Me</option>}
+              {approverIds
+                .filter((id) => id !== me.id || is('admin'))
+                .map((id) => ({ id, n: name(id) }))
+                .sort((x, y) => x.n.localeCompare(y.n))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.n || 'Unknown'}
+                  </option>
+                ))}
+            </select>
           </label>
           <button className="btn" type="submit">
             Show
@@ -119,7 +138,7 @@ export async function PaymentRequestList({ title, sub, statuses, base, region, b
       )}
       {byApprovalDay && (
         <p className="muted">
-          {approverView ? 'Requests you approved' : 'Approved requests'}
+          {who === me.id ? 'Requests you approved' : who ? `Requests approved by ${name(who)}` : 'Approved requests'}
           {day ? ` on ${fmtDate(day)}: ${rows.length}.` : ', latest approval first.'}
         </p>
       )}

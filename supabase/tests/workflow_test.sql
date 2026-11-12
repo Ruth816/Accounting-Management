@@ -397,11 +397,19 @@ insert into ids values ('krb', save_payment_request(null, jsonb_build_object(
   'request_kind', 'reimbursable',
   'items', jsonb_build_array(jsonb_build_object('description', 'a', 'amount', 40)))));
 select t.eq((select reimbursable from payment_requests where id = (select v from ids where k='krb')), true, 'reimbursable kind sets reimbursable');
+-- VisMin always takes two approvers (Ruth, 12 November).
+select t.as_user('adm');
+select admin_set_routes(jsonb_build_object('VisMin', jsonb_build_array(t.uid('appr'), t.uid('appr2'))));
+select t.as_user('req');
 select submit_payment_request((select v from ids where k='kad'));
 select submit_payment_request((select v from ids where k='krb'));
 select t.as_user('appr');
 select approve_payment_request((select v from ids where k='kad'));
+select t.expect_error(format('select approve_payment_request(%L)', (select v from ids where k='kad')), 'waiting for');
 select approve_payment_request((select v from ids where k='krb'));
+select t.as_user('appr2');
+select approve_payment_request((select v from ids where k='kad'));
+select t.as_user('appr');
 select t.as_user('fr');
 insert into ids values ('fkad', t.fr_of((select v from ids where k='kad')));
 insert into ids values ('fkrb', t.fr_of((select v from ids where k='krb')));
@@ -422,6 +430,8 @@ select t.eq((select request_kind || ' ' || reimbursable::text from payment_reque
 select t.eq((select other_notes from payment_requests where id = (select v from ids where k='krfp')), 'Call before delivery', 'other notes are saved');
 select submit_payment_request((select v from ids where k='krfp'));
 select t.as_user('appr');
+select approve_payment_request((select v from ids where k='krfp'));
+select t.as_user('appr2');
 select approve_payment_request((select v from ids where k='krfp'));
 select t.as_user('fr');
 insert into ids values ('fkrfp', t.fr_of((select v from ids where k='krfp')));
@@ -536,6 +546,9 @@ select t.eq((select count(*)::int from payment_requests where id = (select v fro
 select t.eq(can_see_pr((select v from ids where k='rn2')), false, 'VisMin-only approver cannot open NCR');
 select t.as_user('hm');
 select t.eq((select count(*)::int from payment_requests where id in ((select v from ids where k='rn2'), (select v from ids where k='rn'))), 2, 'approver on both regions sees both');
+-- One person cannot be both VisMin approvers (Ruth, 12 November).
+select t.as_user('adm');
+select t.expect_error(format('select admin_set_routes(%L::jsonb)', jsonb_build_object('VisMin', jsonb_build_array(t.uid('hm'), t.uid('hm')))), 'must be different');
 select t.as_user('adm');
 select admin_set_routes('{}'::jsonb);
 -- With no routing, the approver's own Region still limits them.
