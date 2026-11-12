@@ -266,15 +266,29 @@ tr.selected td { background: rgba(79, 70, 229, 0.12); }
 .carried .card { box-shadow: none; border: 0; padding: 0; background: transparent; }
 
 .search-select { position: relative; }
-.search-select > input:not([type=hidden]) { width: 100%; }
+/* Click-to-pick field: looks like the other inputs, opens the list on click. */
+.search-select-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  font: inherit; color: var(--text); text-align: left; cursor: pointer;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--input); min-width: 0;
+}
+.search-select-field > span:first-child { overflow-wrap: anywhere; }
+.search-select-field.empty > span:first-child { color: var(--muted); }
+.search-select-chevron { color: var(--muted); flex: none; }
 .search-options {
-  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); max-height: 280px; overflow-y: auto;
-  margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--border);
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); min-width: 260px;
+  padding: 4px; background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
+.search-options-filter { width: 100%; margin-bottom: 4px; }
+.search-options ul { max-height: 320px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
 .search-options li { padding: 6px 10px; border-radius: 6px; cursor: pointer; }
 .search-options li.active { background: rgba(79, 70, 229, 0.25); }
 .search-options li[aria-selected=true] { font-weight: 600; }
+.search-options li.search-options-group {
+  position: sticky; top: 0; cursor: default; padding: 6px 10px 4px; background: var(--surface);
+  color: var(--muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+}
 
 .fund-lines { display: grid; gap: 10px; margin-top: 12px; }
 /* Each item is a box of labelled fields that wrap to the screen width. */
