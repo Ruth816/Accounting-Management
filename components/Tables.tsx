@@ -4,7 +4,8 @@ import { ActionForm, Submit } from './ActionForm'
 import { requestAction } from '@/app/actions'
 import { DeleteButton } from './DeleteButton'
 import { EditButton } from './EditButton'
-import { fmtDate, money } from '@/lib/format'
+import { BULK_APPROVE_FORM } from './BulkApproveForm'
+import { fmtDate, fmtDateTime, money } from '@/lib/format'
 import { type FREditMode, frRegionOf, frTypeLabel, prKindLabel } from '@/lib/labels'
 import type { FundRequest, PaymentRequest } from '@/lib/types'
 
@@ -15,6 +16,7 @@ export function PRTable({
   canDelete,
   canEdit,
   canApprove,
+  showApprovedOn,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
@@ -22,13 +24,17 @@ export function PRTable({
   canDelete?: (r: PaymentRequest) => boolean
   canEdit?: (r: PaymentRequest) => boolean
   canApprove?: (r: PaymentRequest) => boolean
+  showApprovedOn?: boolean
 }) {
   if (!rows.length) return <p className="muted">{empty}</p>
+  // Tick boxes for the Payment Approver's "Approve ticked" (Ruth, 12 November).
+  const ticks = !!canApprove && rows.some((r) => canApprove(r))
   return (
     <div className="table-wrap">
       <table className="stack-mobile">
         <thead>
           <tr>
+            {ticks && <th aria-label="Tick" />}
             <th>REQ No.</th>
             <th>Type</th>
             <th>Region</th>
@@ -37,6 +43,7 @@ export function PRTable({
             <th>Requested by</th>
             <th className="num">Amount due</th>
             <th>Required</th>
+            {showApprovedOn && <th>Approved on</th>}
             <th>Status</th>
             {(canDelete || canEdit || canApprove) && <th aria-label="Actions" />}
           </tr>
@@ -44,6 +51,13 @@ export function PRTable({
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
+              {ticks && (
+                <td data-label="Tick">
+                  {canApprove?.(r) && (
+                    <input type="checkbox" form={BULK_APPROVE_FORM} name="ids" value={r.id} aria-label={`Tick ${r.req_no}`} />
+                  )}
+                </td>
+              )}
               <td data-label="REQ No.">
                 <Link href={`/payment-requests/${r.id}`}>{r.req_no}</Link>
               </td>
@@ -58,12 +72,16 @@ export function PRTable({
                 {r.currency} {money(r.total_due)}
               </td>
               <td data-label="Required">{fmtDate(r.date_required)}</td>
+              {showApprovedOn && <td data-label="Approved on">{fmtDateTime(r.approved_on)}</td>}
               <td data-label="Status">
                 <StatusBadge status={r.status} />
               </td>
               {(canDelete || canEdit || canApprove) && (
                 <td data-label="">
                   <span className="row-actions">
+                    {canApprove && r.status === 'pending_payment_approval' && !canApprove(r) && r.approver_id && (
+                      <span className="muted small">Waiting for {name(r.approver_id)}</span>
+                    )}
                     {canApprove?.(r) && (
                       <ActionForm action={requestAction} hidden={{ op: 'approve_pr', id: r.id }} confirm={`Approve payment request ${r.req_no}?`}>
                         <Submit className="btn small">Approve</Submit>

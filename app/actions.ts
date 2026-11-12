@@ -179,6 +179,29 @@ export async function markPostedToQb(_: ActionState, fd: FormData): Promise<Acti
   return done(data === 1 ? 'Exported to QuickBooks and locked.' : `${data} requests exported to QuickBooks and locked.`)
 }
 
+// Payment Approver: approve every ticked payment request at once (Ruth, 12 November).
+// Each is approved on its own, so one that can't be approved doesn't stop the rest.
+export async function approvePaymentRequests(_: ActionState, fd: FormData): Promise<ActionState> {
+  const supabase = await createClient()
+  const ids = [...new Set(fd.getAll('ids').map(String).filter(Boolean))]
+  if (ids.length === 0) return { error: 'Tick at least one request.' }
+  let approved = 0
+  const failed: string[] = []
+  for (const id of ids) {
+    const { error } = await supabase.rpc('approve_payment_request', { p_id: id })
+    if (!error) {
+      approved++
+      continue
+    }
+    const { data } = await supabase.from('payment_requests').select('req_no').eq('id', id).maybeSingle()
+    failed.push(`${data?.req_no ?? 'A request'}: ${error.message}`)
+  }
+  const ok = approved === 1 ? '1 request approved.' : `${approved} requests approved.`
+  if (failed.length === 0) return done(ok)
+  if (approved > 0) done() // refresh the lists and send the SMS for the ones that went through
+  return { error: `${approved ? ok + ' ' : ''}Not approved: ${failed.join(' ')}` }
+}
+
 // Every other button: one dispatcher keyed by "op".
 export async function requestAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const supabase = await createClient()
