@@ -36,7 +36,7 @@ export function RegionTabs({ base, current, counts }: { base: string; current: R
   return (
     <nav className="region-tabs" aria-label="Region">
       {tabs.map((t) => (
-        <Link key={t} href={t === 'all' ? base : `${base}?region=${t}`} className={`region-tab${t === current ? ' active' : ''}`}>
+        <Link key={t} href={t === 'all' ? base : `${base}${base.includes('?') ? '&' : '?'}region=${t}`} className={`region-tab${t === current ? ' active' : ''}`}>
           {t === 'all' ? 'All' : t} <span className="tab-count">{counts[t]}</span>
         </Link>
       ))}
@@ -65,6 +65,7 @@ export function GroupedPR({
   canDelete,
   canEdit,
   canApprove,
+  showApprovedOn,
 }: {
   rows: PaymentRequest[]
   name: (id: string | null) => string
@@ -72,6 +73,7 @@ export function GroupedPR({
   canDelete?: (r: PaymentRequest) => boolean
   canEdit?: (r: PaymentRequest) => boolean
   canApprove?: (r: PaymentRequest) => boolean
+  showApprovedOn?: boolean
 }) {
   const kinds: Kind[] = ['rfp', 'regular', 'auto', 'reimb']
   return (
@@ -90,7 +92,7 @@ export function GroupedPR({
               const total = fmtTotals(rs.reduce<Record<string, number>>((t, r) => ({ ...t, [r.currency]: (t[r.currency] ?? 0) + Number(r.total_due ?? 0) }), {}))
               return (
                 <Group key={k} title={KIND_LABEL[k]} count={rs.length} total={total}>
-                  {rs.length > 0 && <PRTable rows={rs} name={name} canDelete={canDelete} canEdit={canEdit} canApprove={canApprove} />}
+                  {rs.length > 0 && <PRTable rows={rs} name={name} canDelete={canDelete} canEdit={canEdit} canApprove={canApprove} showApprovedOn={showApprovedOn} />}
                 </Group>
               )
             })}
