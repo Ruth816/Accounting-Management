@@ -59,7 +59,9 @@ export async function PaymentRequestList({ title, sub, statuses, base, region, b
     is('payment_approver') &&
     r.status === 'pending_payment_approval' &&
     r.requestor_id !== me.id &&
-    (r.approver_id === me.id || !routed.has(r.region ?? 'NCR'))
+    r.first_approver_id !== me.id &&
+    // VisMin always goes Jonathan (approver 1), then Hoe Ming (approver 2) (Ruth, 12 November).
+    (r.approver_id === me.id || (!routed.has(r.region ?? 'NCR') && r.region !== 'VisMin'))
   const visibleRegions = reg === 'all' ? shown(REGIONS.filter((g) => rows.some((r) => prRegion(r) === g)), limited) : [reg]
   const approvable = rows.filter((r) => visibleRegions.includes(prRegion(r)) && canApprove(r)).length
   const dayQ = (d: string | null) => {

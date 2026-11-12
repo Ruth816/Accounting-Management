@@ -75,6 +75,10 @@ begin
     return;
   end if;
 
+  -- VisMin is never approved by one person alone, even if its route is missing (Ruth, 12 November).
+  if r.region = 'VisMin' and not has_role('admin') and (r.approval_level < 2 or r.first_approver_id is null or r.first_approver_id = uid) then
+    raise exception 'VisMin requests need approver 1 and then approver 2. Ask an Admin to set both VisMin approvers in Users & settings.';
+  end if;
   update payment_requests set status = 'approved_awaiting_funding', approved_on = now(), approver_id = uid,
     disapproval_reason = null, return_note = null
   where id = r.id;
