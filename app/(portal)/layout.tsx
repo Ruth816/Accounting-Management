@@ -9,7 +9,7 @@ import { SideNav, type NavSection } from '@/components/SideNav'
 import { ROLE_LABEL } from '@/lib/labels'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const { supabase, me, is } = await getMe()
+  const { supabase, me, is, seesOpenPaymentRequests } = await getMe()
   const { count } = await supabase
     .from('notifications')
     .select('id', { count: 'exact', head: true })
@@ -22,7 +22,7 @@ export default async function PortalLayout({ children }: { children: React.React
       title: 'Requests',
       items: [
         { href: '/', label: 'Dashboard', icon: 'dashboard' },
-        { href: '/payment-requests', label: 'Payment requests', icon: 'doc' },
+        ...(seesOpenPaymentRequests ? [{ href: '/payment-requests', label: 'Payment requests', icon: 'doc' as const }] : []),
         { href: '/payment-requests/approved', label: 'Payment approved', icon: 'docCheck' },
         // Fund pages are for funding roles only; a Payment Requestor sees just their own requests.
         ...(seesFunds
