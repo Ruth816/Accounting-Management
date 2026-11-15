@@ -24,7 +24,12 @@ export const getMe = cache(async () => {
     const regions = [...new Set((routes ?? []).map((r: { region: 'NCR' | 'VisMin' }) => r.region))]
     if (regions.length < 2) myRegion = profile.region ?? regions[0] ?? null
   }
-  return { supabase, me: profile, is, myRegion, limited }
+  // A Fund Requestor only works with approved payment requests, so the
+  // "Payment requests" page (drafts, pending, returned, expired) is hidden
+  // unless they also hold another role that needs it (Ruth, 15 November).
+  const seesOpenPaymentRequests =
+    is('payment_requestor') || is('payment_approver') || is('fund_approver') || !is('fund_requestor')
+  return { supabase, me: profile, is, myRegion, limited, seesOpenPaymentRequests }
 })
 
 export const getDirectory = cache(async () => {
