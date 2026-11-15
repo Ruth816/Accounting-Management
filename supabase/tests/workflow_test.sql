@@ -305,6 +305,9 @@ select t.eq((select count(*)::int from lookups where list = 'category' and label
 select t.eq((select count(*)::int from lookups where list = 'category' and label in ('Cost of sales:PROJ SUBCON', 'Cost of sales:PROJ Freight and delivery Fees', 'TRANSPORTATION EXPENSES- ADMIN:Transpo Allowances')), 3, 'categories follow the October 2026 QuickBooks list');
 select t.eq((select count(*)::int from lookups where list = 'category' and label = 'PROJ SUBCON'), 0, 'old PROJ names are gone');
 select t.eq((select count(*)::int from lookups where list = 'category'), 143, 'every QuickBooks account is a category');
+select t.eq((select count(*)::int from lookups where list = 'category' and active), 78, 'only expenses, cost of sales and directors advances are offered');
+select t.eq((select active from lookups where list = 'category' and label = 'ADVANCES:Directors Advances'), true, 'Directors Advances is offered');
+select t.eq((select active from lookups where list = 'category' and label = 'Loan Payable'), false, 'Loan Payable is not offered');
 select t.eq((select qb_type from lookups where list = 'category' and label = 'Loan Payable'), 'Accounts payable (A/P)', 'non-expense accounts show their QuickBooks type');
 select t.eq((select label from lookups where list = 'category' order by sort limit 1), 'AMORTIZATION EXPENSES', 'Expenses come first');
 select t.eq((select payment_method from fund_requests where id = (select v from ids where k='ad')), 'Check', 'auto debit can still be paid by Check');
