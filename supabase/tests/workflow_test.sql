@@ -175,7 +175,11 @@ select disapprove_fund_request((select v from ids where k='fr'), 'Wrong category
 select t.as_user('fr');
 select return_to_payment_approver((select v from ids where k='fr'), 'Amount looks wrong');
 select t.eq((select status::text || coalesce(cheque_id::text, '-') from fund_requests where id = (select v from ids where k='fr')), 'cancelled-', 'fund request cancelled and off its cheque');
+-- Checked as the database owner: once it is back with the approver, the Fund Requestor no longer sees it.
+reset role;
 select t.eq((select status::text from payment_requests where id = (select v from ids where k='pr')), 'pending_payment_approval', 'payment request back with approver');
+set role authenticated;
+select t.eq((select count(*)::int from payment_requests where id = (select v from ids where k='pr')), 0, 'fund requestor no longer sees the returned request');
 select t.eq((select cheque_total(id) from cheques where cheque_no = '100200'), 24465.00, 'cheque total drops the cancelled request');
 
 -- Approve again, receive again, approve funding.
@@ -828,6 +832,15 @@ select t.eq((select active from profiles where id = t.uid('dup')), false, 'old a
 delete from auth.users where email = 'dup@x.test';
 select t.eq((select count(*)::int from profiles where email = 'dup@x.test'), 0, 'old account can then be deleted');
 set role authenticated;
+
+-- A Fund Requestor sees approved payment requests only (Ruth, 15 November).
+reset role;
+select t.eq((select count(*) > 0 from payment_requests where status in ('draft', 'pending_payment_approval', 'returned_to_requestor', 'expired', 'cancelled')), true, 'unapproved payment requests exist');
+select t.eq((select count(*) > 0 from payment_requests where status in ('approved_awaiting_funding', 'in_funding_preparation', 'pending_fund_approval', 'returned_to_fund_requestor', 'approved_ready_for_qb', 'approved_posted_to_qb', 'sync_failed') and region is distinct from 'VisMin'), true, 'approved payment requests exist');
+set role authenticated;
+select t.as_user('fr');
+select t.eq((select count(*)::int from payment_requests where status in ('draft', 'pending_payment_approval', 'returned_to_requestor', 'expired', 'cancelled')), 0, 'fund requestor cannot see unapproved payment requests');
+select t.eq((select count(*) > 0 from payment_requests), true, 'fund requestor still sees approved payment requests');
 
 \o
 \echo ALL TESTS PASSED
