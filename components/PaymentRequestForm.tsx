@@ -45,6 +45,19 @@ export function PaymentRequestForm({
     savePaymentRequest,
     initialError ? { error: initialError } : null,
   )
+  const [newFiles, setNewFiles] = useState(0)
+  const [fileError, setFileError] = useState<string | null>(null)
+  // A document is required before submitting; a draft saves without one (Ruth, 16 November).
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    if (submitter?.value === 'submit' && files.length + newFiles === 0) {
+      e.preventDefault()
+      setFileError('Attach at least one document in the Memo section before submitting for approval.')
+      return
+    }
+    setFileError(null)
+    onSubmit(e)
+  }
   const [poMode, setPoMode] = useState(pr?.po_mode?.split(' ')[0] ?? '')
   const [rows, setRows] = useState<Row[]>(
     pr?.items.length
@@ -70,7 +83,7 @@ export function PaymentRequestForm({
   const setRow = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   return (
-    <form onSubmit={onSubmit} className="stack">
+    <form onSubmit={submit} className="stack">
       <PendingProvider value={pending}>
       {pr && <input type="hidden" name="id" value={pr.id} />}
 
@@ -298,12 +311,15 @@ export function PaymentRequestForm({
       </section>
 
       <section className="card">
-        <h2>Memo</h2>
-        <p className="small muted">Photos or documents related to this request, such as quotations, receipts or site photos.</p>
+        <h2>Memo *</h2>
+        <p className="small muted">
+          Photos or documents related to this request, such as quotations, receipts or site photos. At least one is required
+          before submitting for approval.
+        </p>
         {pr ? (
           <Attachments files={files} prId={pr.id} canEdit userId={userId} />
         ) : (
-          <PendingAttachments userId={userId} />
+          <PendingAttachments userId={userId} onCount={setNewFiles} />
         )}
       </section>
 
@@ -327,6 +343,7 @@ export function PaymentRequestForm({
           <p className="small muted">Saved in the history with your name and the time.</p>
         </section>
       )}
+      {fileError && <p className="msg error">{fileError}</p>}
       <Message state={state} />
       <div className="actions sticky">
         {afterApproval ? (

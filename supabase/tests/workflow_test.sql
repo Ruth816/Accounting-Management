@@ -53,6 +53,19 @@ update profiles set roles = '{fund_approver}' where email = 'fa@x.test';
 update profiles set roles = '{admin}' where email = 'adm@x.test';
 update profiles set default_payment_approver = t.uid('appr'), mobile_no = '639181112222' where email = 'req@x.test';
 
+-- A payment request needs a document before it is submitted (Ruth, 16 November).
+-- Test requests get one automatically, unless t.no_file is set; the rule itself
+-- is checked at the end.
+create function t.auto_file() returns trigger language plpgsql security definer as $$
+begin
+  if coalesce(current_setting('t.no_file', true), '') <> 'on' then
+    insert into public.attachments (payment_request_id, storage_path, file_name, uploaded_by)
+    values (new.id, new.requestor_id || '/test.pdf', 'test.pdf', new.requestor_id);
+  end if;
+  return new;
+end $$;
+create trigger t_auto_file after insert on payment_requests for each row execute function t.auto_file();
+
 set role authenticated;
 
 -- Stage 1 -------------------------------------------------------------------
@@ -841,6 +854,19 @@ set role authenticated;
 select t.as_user('fr');
 select t.eq((select count(*)::int from payment_requests where status in ('draft', 'pending_payment_approval', 'returned_to_requestor', 'expired', 'cancelled')), 0, 'fund requestor cannot see unapproved payment requests');
 select t.eq((select count(*) > 0 from payment_requests), true, 'fund requestor still sees approved payment requests');
+
+-- Submitting needs at least one attached document; a draft saves without one.
+select t.as_user('req');
+select set_config('t.no_file', 'on', false);
+insert into ids values ('nofile', save_payment_request(null, ('{"payable_to": "No File Co", "purpose": "Check", "date_required": "2026-11-20",
+  "items": [{"description": "Fee", "amount": "100"}], "billing_type": "VAT", "wtax_rate": "0", "terms_accepted": true,
+  "approver_id": "' || t.uid('appr') || '"}')::jsonb));
+select set_config('t.no_file', '', false);
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='nofile')), 'draft', 'draft saves without a document');
+select t.expect_error(format('select submit_payment_request(%L)', (select v from ids where k='nofile')), 'Attach at least one document');
+select add_attachment((select v from ids where k='nofile'), null, t.uid('req') || '/quote.pdf', 'quote.pdf');
+select submit_payment_request((select v from ids where k='nofile'));
+select t.eq((select status::text from payment_requests where id = (select v from ids where k='nofile')), 'pending_payment_approval', 'submits once a document is attached');
 
 \o
 \echo ALL TESTS PASSED
