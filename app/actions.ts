@@ -83,6 +83,13 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
   payload.items = fd.getAll('item_description').map((d, i) => ({ description: String(d), amount: amounts[i] ?? '' }))
   const { data: savedId, error } = await supabase.rpc('save_payment_request', { p_id: id, p: payload })
   if (error) return { error: error.message }
+  // Memo files picked before the first save: attach them now, while it is still a draft.
+  const newPaths = fd.getAll('new_file_path').map(String)
+  const newNames = fd.getAll('new_file_name').map(String)
+  for (const [i, path] of newPaths.entries()) {
+    const { error: e } = await supabase.rpc('add_attachment', { p_pr: savedId, p_fr: null, p_path: path, p_name: newNames[i] ?? path })
+    if (e) await supabase.storage.from('attachments').remove([path])
+  }
   // New request: if someone saved first, the number shown on the form was taken.
   let q = ''
   const shown = str(fd, 'preview_req_no')

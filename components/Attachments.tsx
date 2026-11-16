@@ -78,3 +78,58 @@ export function Attachments({
     </div>
   )
 }
+
+// A new request has no id yet: files are uploaded to storage as they are picked and
+// listed in the form, then attached to the request when it is first saved.
+export function PendingAttachments({ userId }: { userId: string }) {
+  const [picked, setPicked] = useState<{ path: string; name: string }[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function upload(input: HTMLInputElement) {
+    const list = input.files
+    if (!list?.length) return
+    setError(null)
+    setBusy(true)
+    const supabase = createClient()
+    const added: { path: string; name: string }[] = []
+    for (const file of Array.from(list)) {
+      const safe = file.name.replace(/[^\w.\-]+/g, '_')
+      const path = `${userId}/${crypto.randomUUID()}-${safe}`
+      const { error: upErr } = await supabase.storage.from('attachments').upload(path, file)
+      if (upErr) setError(`${file.name}: ${upErr.message}`)
+      else added.push({ path, name: file.name })
+    }
+    setPicked((p) => [...p, ...added])
+    input.value = ''
+    setBusy(false)
+  }
+
+  async function remove(path: string) {
+    setPicked((p) => p.filter((f) => f.path !== path))
+    await createClient().storage.from('attachments').remove([path])
+  }
+
+  return (
+    <div>
+      {picked.length === 0 && <p className="muted">No files attached.</p>}
+      <ul className="files">
+        {picked.map((f) => (
+          <li key={f.path}>
+            <span>{f.name}</span>
+            <input type="hidden" name="new_file_path" value={f.path} />
+            <input type="hidden" name="new_file_name" value={f.name} />
+            <button type="button" className="link danger" onClick={() => remove(f.path)}>
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+      <label className="upload">
+        <input type="file" multiple onChange={(e) => upload(e.currentTarget)} disabled={busy} />
+      </label>
+      {busy && <p className="small muted">Uploading…</p>}
+      {error && <p className="msg error">{error}</p>}
+    </div>
+  )
+}
