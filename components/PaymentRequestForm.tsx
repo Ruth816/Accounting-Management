@@ -5,7 +5,8 @@ import { savePaymentRequest } from '@/app/actions'
 import { Message, Submit, useSubmit } from './ActionForm'
 import { itemNo, money, paymentAmounts } from '@/lib/calc'
 import { PR_KIND_LABEL, TERMS } from '@/lib/labels'
-import type { PaymentRequest, Person } from '@/lib/types'
+import { Attachments, PendingAttachments } from './Attachments'
+import type { Attachment, PaymentRequest, Person } from '@/lib/types'
 
 type Row = { description: string; amount: string }
 
@@ -21,6 +22,8 @@ export function PaymentRequestForm({
   routes,
   requestorId,
   afterApproval,
+  files = [],
+  userId,
 }: {
   pr: PaymentRequest | null
   approvers: Person[]
@@ -34,6 +37,9 @@ export function PaymentRequestForm({
   requestorId?: string
   // An Admin correcting an approved request: save only, the status stays.
   afterApproval?: boolean
+  // Memo: photos and documents for this request (Ruth, 16 November).
+  files?: Attachment[]
+  userId: string
 }) {
   const { state, onSubmit, pending, PendingProvider } = useSubmit(
     savePaymentRequest,
@@ -289,6 +295,19 @@ export function PaymentRequestForm({
           </dd>
         </dl>
         <p className="small muted">The bank transfer fee is recorded only and is not added to the total.</p>
+      </section>
+
+      <section className="card">
+        <h2>Memo *</h2>
+        <p className="small muted">
+          Photos or documents related to this request, such as quotations, receipts or site photos. At least one is required
+          to submit for approval; without one the request is saved as a draft only.
+        </p>
+        {pr ? (
+          <Attachments files={files} prId={pr.id} canEdit userId={userId} />
+        ) : (
+          <PendingAttachments userId={userId} />
+        )}
       </section>
 
       <section className="card">

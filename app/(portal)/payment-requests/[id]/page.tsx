@@ -133,11 +133,9 @@ export default async function PaymentRequestPage({
             routes={routes}
             requestorId={pr.requestor_id}
             afterApproval={afterApproval}
+            files={(files ?? []) as Attachment[]}
+            userId={me.id}
           />
-          <section className="card">
-            <h2>Attachments</h2>
-            <Attachments files={(files ?? []) as Attachment[]} prId={pr.id} canEdit userId={me.id} />
-          </section>
           {afterApproval ? (
             <Link className="btn secondary" href={`/payment-requests/${pr.id}`}>
               Done editing
@@ -161,7 +159,8 @@ export default async function PaymentRequestPage({
           )}
           <PRView pr={pr} name={name} />
           <section className="card">
-            <h2>Attachments</h2>
+            <h2>Memo</h2>
+            <p className="small muted">Photos and documents for this request.</p>
             <Attachments files={(files ?? []) as Attachment[]} prId={pr.id} canEdit={false} userId={me.id} />
           </section>
         </>

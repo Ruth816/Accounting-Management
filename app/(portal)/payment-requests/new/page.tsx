@@ -14,8 +14,7 @@ export default async function NewPaymentRequest() {
   return (
     <div className="stack">
       <h1>New payment request</h1>
-      <PaymentRequestForm pr={null} approvers={approvers} defaultApprover={me.default_payment_approver} requestorName={me.full_name} routeHint={hint} lockedRegion={myRegion} nextReqNo={(nextReqNo as string | null) ?? null} routes={routes} requestorId={me.id} />
-      <p className="muted small">Save the draft first to attach files.</p>
+      <PaymentRequestForm pr={null} approvers={approvers} defaultApprover={me.default_payment_approver} requestorName={me.full_name} routeHint={hint} lockedRegion={myRegion} nextReqNo={(nextReqNo as string | null) ?? null} routes={routes} requestorId={me.id} userId={me.id} />
     </div>
   )
 }
