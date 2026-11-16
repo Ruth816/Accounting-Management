@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/browser'
 import { addAttachment, requestAction } from '@/app/actions'
@@ -81,9 +81,8 @@ export function Attachments({
 
 // A new request has no id yet: files are uploaded to storage as they are picked and
 // listed in the form, then attached to the request when it is first saved.
-export function PendingAttachments({ userId, onCount }: { userId: string; onCount?: (n: number) => void }) {
+export function PendingAttachments({ userId }: { userId: string }) {
   const [picked, setPicked] = useState<{ path: string; name: string }[]>([])
-  useEffect(() => onCount?.(picked.length), [picked.length, onCount])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
