@@ -18,7 +18,6 @@ export function PaymentRequestForm({
   requestorName,
   initialError,
   lockedRegion,
-  nextReqNo,
   routes,
   requestorId,
   afterApproval,
@@ -32,7 +31,6 @@ export function PaymentRequestForm({
   requestorName: string
   initialError?: string
   lockedRegion?: 'NCR' | 'VisMin' | null
-  nextReqNo?: string | null
   routes?: { NCR: string[]; VisMin: string[] }
   requestorId?: string
   // An Admin correcting an approved request: save only, the status stays.
@@ -77,9 +75,8 @@ export function PaymentRequestForm({
       <section className="card">
         <h2>Request details</h2>
         <div className="grid">
-          <Field label="Payment REQ No." hint={pr ? undefined : 'Automatic, in the order requests are saved'}>
-            <input value={pr?.req_no ?? nextReqNo ?? 'Given on first save'} readOnly disabled />
-            {!pr && nextReqNo && <input type="hidden" name="preview_req_no" value={nextReqNo} />}
+          <Field label="Payment REQ No." hint={pr?.req_no ? undefined : 'Filled in by the Fund Requestor once approved'}>
+            <input value={pr?.req_no ?? ''} placeholder="Blank until approved" readOnly disabled />
           </Field>
           <Field label="Requested by">
             <input value={requestorName} readOnly disabled />

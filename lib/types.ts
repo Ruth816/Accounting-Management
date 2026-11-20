@@ -44,7 +44,7 @@ export interface Item {
 
 export interface PaymentRequest {
   id: string
-  req_no: string
+  req_no: string | null // typed by the Fund Requestor once approved (Ruth, 20 November)
   requestor_id: string
   approver_id: string | null
   status: Status

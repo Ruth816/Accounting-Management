@@ -90,13 +90,8 @@ export async function savePaymentRequest(_: ActionState, fd: FormData): Promise<
     const { error: e } = await supabase.rpc('add_attachment', { p_pr: savedId, p_fr: null, p_path: path, p_name: newNames[i] ?? path })
     if (e) await supabase.storage.from('attachments').remove([path])
   }
-  // New request: if someone saved first, the number shown on the form was taken.
-  let q = ''
-  const shown = str(fd, 'preview_req_no')
-  if (!id && shown) {
-    const { data: saved } = await supabase.from('payment_requests').select('req_no').eq('id', savedId).maybeSingle()
-    if (saved && saved.req_no !== shown) q = `?renumbered=${encodeURIComponent(shown)}`
-  }
+  // The REQ No. is typed later by the Fund Requestor (Ruth, 20 November).
+  const q = ''
   if (intent === 'submit') {
     // No document attached: it stays a draft and can't go for approval (Ruth, 16 November).
     const { count: fileCount } = await supabase
@@ -212,7 +207,7 @@ export async function approvePaymentRequests(_: ActionState, fd: FormData): Prom
       continue
     }
     const { data } = await supabase.from('payment_requests').select('req_no').eq('id', id).maybeSingle()
-    failed.push(`${data?.req_no ?? 'A request'}: ${error.message}`)
+    failed.push(`${data?.req_no ?? 'A request with no REQ No. yet'}: ${error.message}`)
   }
   const ok = approved === 1 ? '1 request approved.' : `${approved} requests approved.`
   if (failed.length === 0) return done(ok)
@@ -248,6 +243,9 @@ export async function requestAction(_: ActionState, fd: FormData): Promise<Actio
       case 'delete_fr':
         await call('delete_fund_request', { p_id: id, p_reason: reason })
         return done('Fund request deleted.')
+      case 'set_req_no':
+        await call('set_payment_req_no', { p_id: id, p_req_no: str(fd, 'req_no') })
+        return done('REQ No. saved.')
       case 'approve_pr':
         await call('approve_payment_request', { p_id: id })
         return done('Approved.')
