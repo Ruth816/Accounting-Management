@@ -77,7 +77,6 @@ export default async function PortalLayout({ children }: { children: React.React
             {me.roles.length ? ` · ${me.roles.map((r) => ROLE_LABEL[r]).join(', ')}` : ''}
           </span>
           <span className="signed-in-actions">
-            <RefreshButton />
             <form action={signOut}>
               <button className="link small" type="submit">
                 Sign out
@@ -87,7 +86,10 @@ export default async function PortalLayout({ children }: { children: React.React
         </div>
         <UpdateWatcher current={process.env.VERCEL_GIT_COMMIT_SHA ?? 'dev'} />
         <main className="page">
-          <PageBack />
+          <div className="page-tools no-print">
+            <PageBack />
+            <RefreshButton />
+          </div>
           {children}
         </main>
       </div>
