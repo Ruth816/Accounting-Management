@@ -228,6 +228,12 @@ th.num, td.num { text-align: right; white-space: nowrap; }
 .row-actions { display: inline-flex; gap: 6px; }
 .back-btn { align-self: flex-start; }
 .page > .back-btn { margin-bottom: 12px; }
+.page-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.page-tools .refresh-btn { margin-left: auto; }
+.refresh-icon { display: inline-block; line-height: 1; }
+.refresh-icon.spin { animation: refresh-spin 0.8s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh-icon.spin { animation: none; } }
 
 /* NCR / VisMin tabs and type groups */
 .region-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
