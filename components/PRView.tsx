@@ -5,7 +5,7 @@ import type { PaymentRequest } from '@/lib/types'
 // Read-only payment request, laid out like the paper form.
 export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | null) => string }) {
   const rows: [string, React.ReactNode][] = [
-    ['Payment REQ No.', pr.req_no],
+    ['Payment REQ No.', pr.req_no ?? 'Not filled in yet'],
     ['Version', pr.version],
     ['Request type', prKindLabel(pr)],
     ['Region', pr.region],

@@ -80,7 +80,9 @@ select t.eq((select approver_id from payment_requests where id = (select v from 
 select t.eq((select array[total_vat_in, total_vat_ex, wtax_amount, total_due]::text from payment_requests where id = (select v from ids where k='pr')),
             '{1120.00,1000.00,20.00,1100.00}', '1,120.00 VAT-in at 2% gives 1,000.00 / 20.00 / 1,100.00');
 select t.eq((select item_no from payment_requests where id = (select v from ids where k='pr')), '1-2', 'item no. 1-n');
-select t.eq((select req_no ~ '^20[0-9]{2} [01][0-9] 0001$' from payment_requests where id = (select v from ids where k='pr')), true, 'req no. format');
+-- No REQ No. on save: the Fund Requestor types it once approved (Ruth, 20 November).
+select t.eq((select req_no is null from payment_requests where id = (select v from ids where k='pr')), true, 'saved without a REQ No.');
+select t.expect_error(format('select set_payment_req_no(%L, %L)', (select v from ids where k='pr'), '2026 11 0001'), 'needs the Fund Requestor role');
 
 select t.expect_error(format('select submit_payment_request(%L)', (select v from ids where k='pr')), 'terms and conditions');
 select save_payment_request((select v from ids where k='pr'), ('{
@@ -132,6 +134,9 @@ select t.eq((select array[request_type::text, payee, item_no, currency, original
             array['2', 'Meralco', '1-2', 'PHP', '1120.00', 'Check', t.uid('fa')::text], 'receive copies fields, NCR/No gives type 2');
 select t.eq((select wtax_note from fund_requests where id = (select v from ids where k='fr')),
             'Less W-tax 2%: PHP 20.00. Total amount due: PHP 1,100.00.', 'W-tax note');
+select set_payment_req_no((select v from ids where k='pr'), '  2026  11 0024 ');
+select t.eq((select req_no from payment_requests where id = (select v from ids where k='pr')), '2026 11 0024', 'Fund Requestor types the REQ No.');
+select t.eq((select count(*)::int from audit_log where payment_request_id = (select v from ids where k='pr') and action = 'REQ No. set'), 1, 'REQ No. is logged');
 
 -- Copied fields cannot be overwritten.
 select save_fund_request((select v from ids where k='fr'), '{"payee": "Hacker", "original_amount": 1}');
@@ -277,7 +282,8 @@ select t.eq((run_daily_jobs() ->> 'reminders')::int, 0, 'no reminder from an ear
 update payment_requests set returned_on = now() - interval '30 days 1 hour' where id = (select v from ids where k='old');
 select t.eq((run_daily_jobs() ->> 'expired')::int, 1, 'expires on day 30');
 select t.eq((select count(*) from payment_requests where id = (select v from ids where k='old')), 0::bigint, 'expired request deleted');
-select t.eq((select count(*) from audit_log where action = 'Expired' and ref is not null), 1::bigint, 'expiry stays in the audit log');
+select t.eq((select count(*) from audit_log where action = 'Expired' and ref = 'No REQ No. · X'), 1::bigint, 'expiry stays in the audit log');
+select t.eq((select count(*)::int from notifications where message like 'Payment request for X was returned: No.%'), 1, 'a message names the payee while there is no REQ No.');
 
 -- Admin
 set role authenticated;
@@ -703,11 +709,13 @@ select t.as_user('fr');
 select t.eq((select count(*) from qb_imported_summary(now() - interval '1 day', now() + interval '1 day'))::int, 0, 'a fund requestor sees nothing in the QuickBooks summary');
 select t.as_user('adm');
 
--- The next REQ No. shown on the form is the one the next save takes.
+-- Several requests can be waiting for a REQ No. at once; a number is used once.
 select t.as_user('req');
-create temp table peek as select peek_next_req_no() as n;
 insert into ids values ('pk', save_payment_request(null, '{"payable_to": "Peek"}'::jsonb));
-select t.eq((select req_no from payment_requests where id = (select v from ids where k='pk')), (select n from peek), 'next REQ No. preview matches the saved number');
+select t.eq((select count(*) > 1 from payment_requests where req_no is null), true, 'several requests without a REQ No.');
+select t.as_user('adm');
+select t.expect_error(format('select set_payment_req_no(%L, %L)', (select v from ids where k='pk'), '2026 11 0024'), 'once the payment request is approved');
+select t.expect_error(format('select set_payment_req_no(%L, %L)', (select v from ids where k='pr'), '2026 11 0099'), 'Posted to QuickBooks');
 
 -- Direct Debit as a Type of payment carries to the fund request.
 select t.as_user('req');

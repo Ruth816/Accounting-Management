@@ -55,12 +55,12 @@ export function PRTable({
               {ticks && (
                 <td data-label="Tick">
                   {canApprove?.(r) && (
-                    <input type="checkbox" form={BULK_APPROVE_FORM} name="ids" value={r.id} aria-label={`Tick ${r.req_no}`} />
+                    <input type="checkbox" form={BULK_APPROVE_FORM} name="ids" value={r.id} aria-label={`Tick ${r.req_no ?? r.payable_to ?? 'request'}`} />
                   )}
                 </td>
               )}
               <td data-label="REQ No.">
-                <Link href={`/payment-requests/${r.id}`}>{r.req_no}</Link>
+                <Link href={`/payment-requests/${r.id}`}>{r.req_no ?? 'No REQ No. yet'}</Link>
               </td>
               <td data-label="Type">{prKindLabel(r)}</td>
               <td data-label="Region">{r.region}</td>
@@ -90,7 +90,7 @@ export function PRTable({
                       <span className="muted small">Waiting for {name(r.approver_id)}</span>
                     )}
                     {canApprove?.(r) && (
-                      <ActionForm action={requestAction} hidden={{ op: 'approve_pr', id: r.id }} confirm={`Approve payment request ${r.req_no}?`}>
+                      <ActionForm action={requestAction} hidden={{ op: 'approve_pr', id: r.id }} confirm={`Approve payment request ${r.req_no ?? `for ${r.payable_to ?? 'this payee'}`}?`}>
                         <Submit className="btn small">Approve</Submit>
                       </ActionForm>
                     )}
@@ -100,7 +100,7 @@ export function PRTable({
                         withdrawOp={r.status === 'pending_payment_approval' ? 'withdraw_pr' : undefined}
                       />
                     )}
-                    {canDelete?.(r) && <DeleteButton op="delete_pr" id={r.id} label={`payment request ${r.req_no}`} />}
+                    {canDelete?.(r) && <DeleteButton op="delete_pr" id={r.id} label={`payment request ${r.req_no ?? `for ${r.payable_to ?? 'this payee'}`}`} />}
                   </span>
                 </td>
               )}

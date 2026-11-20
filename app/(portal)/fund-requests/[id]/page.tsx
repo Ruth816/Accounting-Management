@@ -8,6 +8,7 @@ import { getDirectory, getMe } from '@/lib/auth'
 import { FundRequestForm, type ChequeOption } from '@/components/FundRequestForm'
 import { FRView } from '@/components/FRView'
 import { PRView } from '@/components/PRView'
+import { ReqNoForm, canSetReqNo } from '@/components/ReqNoForm'
 import { FRStatusBadge } from '@/components/StatusBadge'
 import { Tracker } from '@/components/Tracker'
 import { Attachments } from '@/components/Attachments'
@@ -98,7 +99,7 @@ export default async function FundRequestPage({
         <div className="row">
           {pr && (
             <Link href={`/payment-requests/${pr.id}`} className="btn secondary small">
-              Payment request {pr.req_no}
+              Payment request {pr.req_no ?? ''}
             </Link>
           )}
           {canSeeVoucher(fr, is) && (
@@ -115,10 +116,12 @@ export default async function FundRequestPage({
         </div>
       )}
 
+      {pr && canSetReqNo(pr as PaymentRequest, is('fund_requestor')) && <ReqNoForm pr={pr as PaymentRequest} />}
+
       {pr && (
         <details className="card carried" open={editable}>
           <summary>
-            <strong>From payment request {(pr as PaymentRequest).req_no}</strong>{' '}
+            <strong>From payment request {(pr as PaymentRequest).req_no ?? ''}</strong>{' '}
             <span className="muted small">Everything encoded on the payment request, carried over</span>
           </summary>
           <div className="stack">

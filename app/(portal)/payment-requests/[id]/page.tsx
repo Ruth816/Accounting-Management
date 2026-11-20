@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { getDirectory, getMe } from '@/lib/auth'
 import { PaymentRequestForm } from '@/components/PaymentRequestForm'
 import { PRView } from '@/components/PRView'
+import { ReqNoForm, canSetReqNo } from '@/components/ReqNoForm'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Tracker } from '@/components/Tracker'
 import { Attachments } from '@/components/Attachments'
@@ -19,10 +20,10 @@ export default async function PaymentRequestPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ error?: string; renumbered?: string; edit?: string }>
+  searchParams: Promise<{ error?: string; edit?: string }>
 }) {
   const { id } = await params
-  const { error, renumbered, edit } = await searchParams
+  const { error, edit } = await searchParams
   const { supabase, me, is, myRegion } = await getMe()
   const { people, name } = await getDirectory()
 
@@ -78,14 +79,9 @@ export default async function PaymentRequestPage({
   return (
     <div className="stack">
       <BackButton fallback={PR_OPEN_STATUSES.includes(pr.status) ? '/payment-requests' : '/payment-requests/approved'} />
-      {renumbered && renumbered !== pr.req_no && (
-        <div className="msg warn">
-          Another request was saved just before yours and took {renumbered}, so this request is REQ No. <strong>{pr.req_no}</strong>.
-        </div>
-      )}
       <div className="page-head">
         <div>
-          <h1>Payment request {pr.req_no}</h1>
+          <h1>Payment request {pr.req_no ?? '(no REQ No. yet)'}</h1>
           <div className="row status-actions">
             {fr?.funded_at && pr.status === 'approved_awaiting_funding' ? (
               // Funded: the requestor can collect it (Ruth, 10 November).
@@ -106,6 +102,8 @@ export default async function PaymentRequestPage({
           </Link>
         )}
       </div>
+
+      {canSetReqNo(pr, is('fund_requestor')) && <ReqNoForm pr={pr} />}
 
       {pr.status === 'returned_to_requestor' && (
         <div className="msg warn">
