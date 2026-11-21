@@ -113,6 +113,15 @@ export function PaymentRequestForm({
           <Field label="Work order no.">
             <input name="work_order_no" defaultValue={pr?.work_order_no ?? ''} />
           </Field>
+          <Field label="PO num">
+            <input name="po_num" defaultValue={pr?.po_num ?? ''} />
+          </Field>
+          <Field label="PO dated">
+            <input type="date" name="po_date" defaultValue={pr?.po_date ?? ''} />
+          </Field>
+          <Field label="Project date (Day 1)" hint="The project's first day">
+            <input type="date" name="project_start_date" defaultValue={pr?.project_start_date ?? ''} />
+          </Field>
           <Field label="Approved by *" hint={routedApprover && !returned ? `Set by ${region} routing` : routeHint ?? (returned ? 'Locked when resubmitting' : undefined)}>
             {returned && <input type="hidden" name="approver_id" value={pr?.approver_id ?? ''} />}
             {routedApprover && !returned ? (
@@ -218,12 +227,6 @@ export function PaymentRequestForm({
       <section className="card">
         <h2>For supplier and customer payment</h2>
         <div className="grid">
-          <Field label="PO num">
-            <input name="po_num" defaultValue={pr?.po_num ?? ''} />
-          </Field>
-          <Field label="PO date">
-            <input type="date" name="po_date" defaultValue={pr?.po_date ?? ''} />
-          </Field>
           <Field label="PO amount">
             <input name="po_amount" inputMode="decimal" className="num" defaultValue={pr?.po_amount ?? ''} />
           </Field>

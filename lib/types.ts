@@ -60,6 +60,7 @@ export interface PaymentRequest {
   job_order_no: string | null
   addendum_no: string | null
   work_order_no: string | null
+  project_start_date: string | null
   date_required: string | null
   payable_to: string | null
   payment_type: 'Cash' | 'Cheque' | 'Bank deposit' | 'Direct Debit'

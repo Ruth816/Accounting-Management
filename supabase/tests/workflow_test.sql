@@ -876,5 +876,12 @@ select add_attachment((select v from ids where k='nofile'), null, t.uid('req') |
 select submit_payment_request((select v from ids where k='nofile'));
 select t.eq((select status::text from payment_requests where id = (select v from ids where k='nofile')), 'pending_payment_approval', 'submits once a document is attached');
 
+-- PO num, PO dated and Project date (Day 1) are saved with the request (Ruth, 21 November).
+insert into ids values ('podates', save_payment_request(null, ('{"payable_to": "PO Co", "purpose": "PO", "date_required": "2026-11-25",
+  "items": [{"description": "Fee", "amount": "100"}], "billing_type": "VAT", "wtax_rate": "0",
+  "po_num": "PO-0042", "po_date": "2026-11-03", "project_start_date": "2026-11-10"}')::jsonb));
+select t.eq((select po_num || ' ' || po_date || ' ' || project_start_date from payment_requests where id = (select v from ids where k='podates')),
+  'PO-0042 2026-11-03 2026-11-10', 'PO details and Project date (Day 1) are saved');
+
 \o
 \echo ALL TESTS PASSED
