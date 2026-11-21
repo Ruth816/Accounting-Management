@@ -16,6 +16,9 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
     ['Job order no.', pr.job_order_no],
     ['Addendum no.', pr.addendum_no],
     ['Work order no.', pr.work_order_no],
+    ['PO num', pr.po_num],
+    ['PO dated', fmtDate(pr.po_date)],
+    ['Project date (Day 1)', fmtDate(pr.project_start_date)],
     ...(pr.first_approver_id
       ? ([['Approver 1', `${name(pr.first_approver_id)} · ${fmtDate(pr.first_approved_on)}`]] as [string, React.ReactNode][])
       : []),
@@ -27,8 +30,6 @@ export function PRView({ pr, name }: { pr: PaymentRequest; name: (id: string | n
     ['Currency', pr.currency],
   ]
   const po: [string, React.ReactNode][] = [
-    ['PO num', pr.po_num],
-    ['PO date', fmtDate(pr.po_date)],
     ['PO amount', pr.po_amount === null ? null : money(pr.po_amount)],
     ['Mode of payment', poModeLabel(pr.po_mode)],
     ['Reference of last payment', pr.last_payment_ref],
